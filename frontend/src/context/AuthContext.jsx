@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import * as authService from '../services/authService';
 
 const AuthContext = createContext();
@@ -7,6 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -25,31 +27,38 @@ export const AuthProvider = ({ children }) => {
           if (isValid) {
             setUser(storedUser);
           } else {
-            // If token is invalid, logout
+            // If token is invalid, clear everything
             console.log('Token invalid, logging out');
             authService.logout();
+            setUser(null);
+            navigate('/login');
           }
         } else {
           console.log('No stored user found');
+          setUser(null);
         }
       } catch (err) {
         console.error('Auth initialization error:', err);
         setError(err.message);
+        // On error, clear everything
         authService.logout();
+        setUser(null);
+        navigate('/login');
       } finally {
         setLoading(false);
-        console.log('Auth initialization complete, loading:', loading);
+        console.log('Auth initialization complete');
       }
     };
 
     initializeAuth();
-  }, []);
+  }, [navigate]);
 
   const login = async (email, password) => {
     try {
       setLoading(true);
       setError(null);
       const response = await authService.login({ email, password });
+      console.log('Login response:', response);
       setUser(response.user);
       return response;
     } catch (err) {
@@ -100,6 +109,7 @@ export const AuthProvider = ({ children }) => {
       setError(null);
       await authService.logout();
       setUser(null);
+      navigate('/login');
     } catch (err) {
       console.error('Logout error:', err);
       setError(err.message || 'Đăng xuất thất bại');

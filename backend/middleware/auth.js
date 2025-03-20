@@ -6,14 +6,21 @@ const Patient = require('../models/patientModel');
 const authenticateToken = async (req, res, next) => {
   try {
     // Get token from header
-    const token = req.header('Authorization')?.replace('Bearer ', '');
+    const authHeader = req.header('Authorization');
+    console.log('Auth header:', authHeader);
+    
+    const token = authHeader?.replace('Bearer ', '');
+    console.log('Extracted token:', token);
     
     if (!token) {
+      console.log('No token found in request');
       return res.status(401).json({ message: 'No token, authorization denied' });
     }
 
     // Verify token
+    console.log('Attempting to verify token with secret:', process.env.JWT_SECRET ? 'Secret exists' : 'No secret found');
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log('Token decoded successfully:', decoded);
     
     // Add user from payload
     req.user = decoded;
@@ -36,7 +43,8 @@ const authenticateToken = async (req, res, next) => {
 
     next();
   } catch (error) {
-    res.status(401).json({ message: 'Token is not valid' });
+    console.error('Token verification failed:', error.message);
+    res.status(401).json({ message: 'Token is not valid', error: error.message });
   }
 };
 

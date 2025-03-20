@@ -18,173 +18,131 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  FormControl,
-  InputLabel,
-  Select,
   MenuItem,
+  Alert,
+  CircularProgress
 } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import appointmentService from '../../services/appointmentService';
+import doctorService from '../../services/doctorService';
+import { format } from 'date-fns';
+import { vi } from 'date-fns/locale';
 
 const Appointments = () => {
   const navigate = useNavigate();
-  const { user, hasRole } = useAuth();
+  const { user, hasRole, loading: authLoading } = useAuth();
   const [appointments, setAppointments] = useState([]);
-  const [open, setOpen] = useState(false);
-  const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [doctors, setDoctors] = useState([]);
-  const [specializations, setSpecializations] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [openDialog, setOpenDialog] = useState(false);
   const [formData, setFormData] = useState({
-    doctorId: '',
-    specializationId: '',
-    date: '',
-    time: '',
-    reason: '',
+    doctor_id: '',
+    appointment_date: format(new Date(), 'yyyy-MM-dd'),
+    appointment_time: '09:00',
+    reason: ''
   });
 
   useEffect(() => {
-    // Kiểm tra quyền
-    if (!hasRole('patient')) {
+    if (!authLoading && !hasRole('patient')) {
       navigate('/login');
     }
-  }, [hasRole, navigate]);
+  }, [authLoading, hasRole, navigate]);
 
   useEffect(() => {
-    // TODO: Fetch appointments data from API
-    fetchAppointments();
-    fetchDoctors();
-    fetchSpecializations();
-  }, []);
+    if (!authLoading && hasRole('patient')) {
+      fetchAppointments();
+      fetchDoctors();
+    }
+  }, [authLoading, hasRole]);
 
   const fetchAppointments = async () => {
     try {
-      // TODO: Implement API call
-      // Using mock data for now
-      const mockData = [
-        {
-          id: 1,
-          doctorName: 'Dr. John Doe',
-          specialization: 'Nội khoa',
-          date: '2024-03-25',
-          time: '09:00',
-          reason: 'Khám định kỳ',
-          status: 'confirmed',
-        },
-        {
-          id: 2,
-          doctorName: 'Dr. Jane Smith',
-          specialization: 'Tim mạch',
-          date: '2024-03-28',
-          time: '14:30',
-          reason: 'Đau ngực',
-          status: 'pending',
-        },
-      ];
-      setAppointments(mockData);
-    } catch (error) {
-      console.error('Error fetching appointments:', error);
+      setLoading(true);
+      const data = await appointmentService.getPatientAppointments();
+      setAppointments(data);
+      setError(null);
+    } catch (err) {
+      setError('Không thể tải danh sách lịch hẹn. Vui lòng thử lại sau.');
+      console.error('Error fetching appointments:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
   const fetchDoctors = async () => {
     try {
-      // TODO: Implement API call
-      const mockDoctors = [
-        { id: 1, name: 'Dr. John Doe', specialization: 'Nội khoa' },
-        { id: 2, name: 'Dr. Jane Smith', specialization: 'Tim mạch' },
-      ];
-      setDoctors(mockDoctors);
-    } catch (error) {
-      console.error('Error fetching doctors:', error);
+      const data = await doctorService.getAllDoctors();
+      setDoctors(data);
+    } catch (err) {
+      console.error('Error fetching doctors:', err);
     }
   };
 
-  const fetchSpecializations = async () => {
-    try {
-      // TODO: Implement API call
-      const mockSpecializations = [
-        { id: 1, name: 'Nội khoa' },
-        { id: 2, name: 'Tim mạch' },
-        { id: 3, name: 'Da liễu' },
-      ];
-      setSpecializations(mockSpecializations);
-    } catch (error) {
-      console.error('Error fetching specializations:', error);
-    }
+  const handleOpenDialog = () => {
+    setFormData({
+      doctor_id: '',
+      appointment_date: format(new Date(), 'yyyy-MM-dd'),
+      appointment_time: '09:00',
+      reason: ''
+    });
+    setOpenDialog(true);
   };
 
-  const handleOpen = (appointment = null) => {
-    if (appointment) {
-      setSelectedAppointment(appointment);
-      setFormData({
-        doctorId: appointment.doctorId,
-        specializationId: appointment.specializationId,
-        date: appointment.date,
-        time: appointment.time,
-        reason: appointment.reason,
-      });
-    } else {
-      setSelectedAppointment(null);
-      setFormData({
-        doctorId: '',
-        specializationId: '',
-        date: '',
-        time: '',
-        reason: '',
-      });
-    }
-    setOpen(true);
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
   };
 
-  const handleClose = () => {
-    setOpen(false);
-    setSelectedAppointment(null);
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // TODO: Implement API call to save/update appointment
-      if (selectedAppointment) {
-        // Update existing appointment
-        setAppointments(appointments.map(appointment =>
-          appointment.id === selectedAppointment.id ? { ...appointment, ...formData } : appointment
-        ));
-      } else {
-        // Add new appointment
-        const newAppointment = {
-          id: appointments.length + 1,
-          doctorName: doctors.find(d => d.id === formData.doctorId)?.name,
-          specialization: specializations.find(s => s.id === formData.specializationId)?.name,
-          ...formData,
-          status: 'pending',
-        };
-        setAppointments([...appointments, newAppointment]);
-      }
-      handleClose();
-    } catch (error) {
-      console.error('Error saving appointment:', error);
+      setLoading(true);
+      await appointmentService.createAppointment(formData);
+      handleCloseDialog();
+      fetchAppointments();
+      setError(null);
+    } catch (err) {
+      setError('Không thể đặt lịch hẹn. Vui lòng thử lại sau.');
+      console.error('Error creating appointment:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleCancel = async (appointmentId) => {
-    try {
-      // TODO: Implement API call to cancel appointment
-      setAppointments(appointments.map(appointment =>
-        appointment.id === appointmentId ? { ...appointment, status: 'cancelled' } : appointment
-      ));
-    } catch (error) {
-      console.error('Error cancelling appointment:', error);
+  const handleCancelAppointment = async (id) => {
+    if (window.confirm('Bạn có chắc chắn muốn hủy lịch hẹn này?')) {
+      try {
+        setLoading(true);
+        await appointmentService.updateAppointmentStatus(id, 'cancelled');
+        fetchAppointments();
+        setError(null);
+      } catch (err) {
+        setError('Không thể hủy lịch hẹn. Vui lòng thử lại sau.');
+        console.error('Error canceling appointment:', err);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
   const getStatusColor = (status) => {
-    switch (status) {
-      case 'confirmed':
-        return 'success';
+    switch (status.toLowerCase()) {
       case 'pending':
         return 'warning';
+      case 'accepted':
+        return 'info';
+      case 'completed':
+        return 'success';
       case 'cancelled':
         return 'error';
       default:
@@ -193,11 +151,13 @@ const Appointments = () => {
   };
 
   const getStatusText = (status) => {
-    switch (status) {
-      case 'confirmed':
-        return 'Đã xác nhận';
+    switch (status.toLowerCase()) {
       case 'pending':
         return 'Chờ xác nhận';
+      case 'accepted':
+        return 'Đã xác nhận';
+      case 'completed':
+        return 'Hoàn thành';
       case 'cancelled':
         return 'Đã hủy';
       default:
@@ -205,10 +165,21 @@ const Appointments = () => {
     }
   };
 
+  const formatDate = (dateString) => {
+    return format(new Date(dateString), 'dd/MM/yyyy', { locale: vi });
+  };
+
+  if (loading && !openDialog) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Grid container spacing={3}>
-        {/* Header */}
         <Grid item xs={12}>
           <Box display="flex" justifyContent="space-between" alignItems="center">
             <Typography variant="h4" component="h1">
@@ -218,14 +189,19 @@ const Appointments = () => {
               variant="contained"
               color="primary"
               startIcon={<AddIcon />}
-              onClick={() => handleOpen()}
+              onClick={handleOpenDialog}
             >
               Đặt lịch hẹn
             </Button>
           </Box>
         </Grid>
 
-        {/* Appointments Table */}
+        {error && (
+          <Grid item xs={12}>
+            <Alert severity="error">{error}</Alert>
+          </Grid>
+        )}
+
         <Grid item xs={12}>
           <TableContainer component={Paper}>
             <Table>
@@ -243,11 +219,11 @@ const Appointments = () => {
               <TableBody>
                 {appointments.map((appointment) => (
                   <TableRow key={appointment.id}>
-                    <TableCell>{appointment.doctorName}</TableCell>
+                    <TableCell>{appointment.doctor_name}</TableCell>
                     <TableCell>{appointment.specialization}</TableCell>
-                    <TableCell>{appointment.date}</TableCell>
-                    <TableCell>{appointment.time}</TableCell>
-                    <TableCell>{appointment.reason}</TableCell>
+                    <TableCell>{formatDate(appointment.appointment_date)}</TableCell>
+                    <TableCell>{appointment.appointment_time}</TableCell>
+                    <TableCell>{appointment.reason || '-'}</TableCell>
                     <TableCell>
                       <Chip
                         label={getStatusText(appointment.status)}
@@ -256,109 +232,105 @@ const Appointments = () => {
                       />
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="outlined"
-                        color="primary"
-                        size="small"
-                        onClick={() => handleOpen(appointment)}
-                        sx={{ mr: 1 }}
-                      >
-                        Chi tiết
-                      </Button>
-                      {appointment.status !== 'cancelled' && (
+                      {(appointment.status === 'pending' || appointment.status === 'accepted') && (
                         <Button
+                          size="small"
                           variant="outlined"
                           color="error"
-                          size="small"
-                          onClick={() => handleCancel(appointment.id)}
+                          onClick={() => handleCancelAppointment(appointment.id)}
                         >
-                          Hủy
+                          Hủy lịch
                         </Button>
                       )}
                     </TableCell>
                   </TableRow>
                 ))}
+                {appointments.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} align="center">
+                      Chưa có lịch hẹn nào
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </TableContainer>
         </Grid>
       </Grid>
 
-      {/* Appointment Dialog */}
-      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {selectedAppointment ? 'Chi tiết lịch hẹn' : 'Đặt lịch hẹn mới'}
-        </DialogTitle>
-        <DialogContent>
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
-            <FormControl fullWidth margin="normal">
-              <InputLabel>Chuyên khoa</InputLabel>
-              <Select
-                value={formData.specializationId}
-                label="Chuyên khoa"
-                onChange={(e) => setFormData({ ...formData, specializationId: e.target.value })}
-                required
-              >
-                {specializations.map((spec) => (
-                  <MenuItem key={spec.id} value={spec.id}>
-                    {spec.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl fullWidth margin="normal">
-              <InputLabel>Bác sĩ</InputLabel>
-              <Select
-                value={formData.doctorId}
-                label="Bác sĩ"
-                onChange={(e) => setFormData({ ...formData, doctorId: e.target.value })}
-                required
-              >
-                {doctors.map((doctor) => (
-                  <MenuItem key={doctor.id} value={doctor.id}>
-                    {doctor.name} - {doctor.specialization}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <TextField
-              fullWidth
-              label="Ngày khám"
-              type="date"
-              value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              margin="normal"
-              required
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              fullWidth
-              label="Giờ khám"
-              type="time"
-              value={formData.time}
-              onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-              margin="normal"
-              required
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              fullWidth
-              label="Lý do khám"
-              value={formData.reason}
-              onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-              margin="normal"
-              required
-              multiline
-              rows={3}
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Hủy</Button>
-          <Button onClick={handleSubmit} variant="contained" color="primary">
-            {selectedAppointment ? 'Cập nhật' : 'Đặt lịch'}
-          </Button>
-        </DialogActions>
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+        <form onSubmit={handleSubmit}>
+          <DialogTitle>Đặt lịch hẹn mới</DialogTitle>
+          <DialogContent>
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12}>
+                <TextField
+                  select
+                  fullWidth
+                  label="Bác sĩ"
+                  name="doctor_id"
+                  value={formData.doctor_id}
+                  onChange={handleInputChange}
+                  required
+                >
+                  {doctors.map((doctor) => (
+                    <MenuItem key={doctor.id} value={doctor.id}>
+                      {doctor.name} - {doctor.specialization}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Ngày khám"
+                  name="appointment_date"
+                  type="date"
+                  value={formData.appointment_date}
+                  onChange={handleInputChange}
+                  required
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{
+                    min: format(new Date(), 'yyyy-MM-dd')
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Giờ khám"
+                  name="appointment_time"
+                  type="time"
+                  value={formData.appointment_time}
+                  onChange={handleInputChange}
+                  required
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{
+                    step: 300 // 5 minutes
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Lý do khám"
+                  name="reason"
+                  value={formData.reason}
+                  onChange={handleInputChange}
+                  multiline
+                  rows={3}
+                  placeholder="Mô tả triệu chứng hoặc lý do khám"
+                />
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseDialog}>Hủy</Button>
+            <Button type="submit" variant="contained" disabled={loading}>
+              {loading ? 'Đang xử lý...' : 'Đặt lịch'}
+            </Button>
+          </DialogActions>
+        </form>
       </Dialog>
     </Container>
   );

@@ -12,13 +12,23 @@ api.interceptors.request.use(
   (config) => {
     // Do something before request is sent
     const token = localStorage.getItem('token');
+    console.log('Request interceptor - Token from localStorage:', token ? 'Token exists' : 'No token');
+    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('Request interceptor - Added token to headers:', config.headers.Authorization);
     }
+    
+    console.log('Request interceptor - Final config:', {
+      url: config.url,
+      method: config.method,
+      headers: config.headers
+    });
+    
     return config;
   },
   (error) => {
-    // Do something with request error
+    console.error('Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
@@ -26,28 +36,27 @@ api.interceptors.request.use(
 // Add a response interceptor
 api.interceptors.response.use(
   (response) => {
-    // Any status code that lie within the range of 2xx cause this function to trigger
+    console.log('Response interceptor - Success:', {
+      url: response.config.url,
+      status: response.status,
+      data: response.data
+    });
     return response;
   },
   (error) => {
-    // Any status codes that falls outside the range of 2xx cause this function to trigger
+    console.error('Response interceptor - Error:', {
+      url: error.config?.url,
+      status: error.response?.status,
+      data: error.response?.data
+    });
+    
     if (error.response) {
-      // The request was made and the server responded with a status code
-      // that falls out of the range of 2xx
-      if (error.response.status === 401) {
-        // Unauthorized - clear local storage and redirect to login
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
-      }
       return Promise.reject(error.response.data);
     } else if (error.request) {
-      // The request was made but no response was received
       return Promise.reject({
         message: 'Không thể kết nối đến server',
       });
     } else {
-      // Something happened in setting up the request that triggered an Error
       return Promise.reject({
         message: 'Có lỗi xảy ra',
       });

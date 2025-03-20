@@ -51,6 +51,23 @@ class Patient {
       throw error;
     }
   }
+
+  // Lấy bệnh nhân theo user_id
+  static async getByUserId(userId) {
+    try {
+      const [patients] = await db.execute(
+        `SELECT p.*, u.name, u.email 
+         FROM patients p 
+         JOIN users u ON p.user_id = u.id 
+         WHERE p.user_id = ?`,
+        [userId]
+      );
+      return patients.length > 0 ? patients[0] : null;
+    } catch (error) {
+      console.error('Error getting patient by user_id:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = Patient; 
