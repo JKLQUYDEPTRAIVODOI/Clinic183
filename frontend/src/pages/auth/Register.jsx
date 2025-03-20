@@ -64,19 +64,17 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+    setErrors({}); // Xóa lỗi cũ trước khi thử lại
     if (!validateForm()) {
-      return;
+      return; // Dừng lại nếu biểu mẫu không hợp lệ
     }
-    
+    setIsSubmitting(true);
     try {
-      setIsSubmitting(true);
-      await register(formData.name, formData.email, formData.password);
+      await register(formData);
       navigate('/');
     } catch (error) {
-      setErrors({
-        general: error.response?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.'
-      });
+      console.error('Registration failed:', error);
+      setErrors({ general: error.message || 'Đăng ký thất bại. Vui lòng thử lại.' });
     } finally {
       setIsSubmitting(false);
     }

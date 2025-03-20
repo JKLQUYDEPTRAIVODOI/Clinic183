@@ -3,7 +3,7 @@ import { useAuth, AuthProvider } from './context/AuthContext';
 import { useEffect } from 'react';
 import Layout from './components/Layout/Layout';
 import Button from './components/UI/Button';
-
+import NotFound from './pages/NotFound';
 // Auth Pages
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
@@ -22,6 +22,13 @@ import ReportsAndStatistics from './pages/admin/ReportsAndStatistics';
 import AdminProfile from './pages/admin/Profile';
 import StaffManagement from './pages/admin/StaffManagement';
 import Settings from './pages/admin/Settings';
+import DiagnosisManagement from './pages/admin/DiagnosesManagement';
+import User from './pages/admin/UserManagement';
+import MedicalRecords from './pages/admin/MedicalRecordsManagement';
+import InvoiceManagement from './pages/admin/InvoiceManagement';
+import RevenueManagement from './pages/admin/RevenueManagement';
+import ServiceManagement from './pages/admin/ServiceManagement';
+
 
 // Doctor Pages
 import DoctorDashboard from './pages/doctor/Dashboard';
@@ -140,11 +147,16 @@ function App() {
               <Route path="doctors" element={<DoctorManagement />} />
               <Route path="patients" element={<PatientManagement />} />
               <Route path="appointments" element={<AppointmentManagement />} />
-              <Route path="services" element={<MedicalServicesManagement />} />
+              <Route path="services" element={<ServiceManagement />} />
               <Route path="medicines" element={<MedicineManagement />} />
               <Route path="reports" element={<ReportsAndStatistics />} />
               <Route path="staff" element={<StaffManagement />} />
               <Route path="settings" element={<Settings />} />
+              <Route path="diagnoses" element={<DiagnosisManagement />} />
+              <Route path="users" element={<User />} />
+              <Route path="medical-records" element={<MedicalRecords />} />
+              <Route path="invoices" element={<InvoiceManagement />} />
+              <Route path="revenue" element={<RevenueManagement />} />
             </Route>
           </Route>
 
@@ -174,23 +186,7 @@ function App() {
           </Route>
 
           {/* Catch all route - 404 */}
-          <Route path="*" element={
-            <Layout>
-              <div className="text-center py-20">
-                <h1 className="text-4xl font-bold text-gray-800 mb-4">404 - Không tìm thấy trang</h1>
-                <p className="text-lg text-gray-600 mb-8">
-                  Trang bạn đang tìm kiếm không tồn tại.
-                </p>
-                <Button 
-                  variant="primary" 
-                  className="px-6 py-2"
-                  onClick={() => navigate('/')}
-                >
-                  Về trang chủ
-                </Button>
-              </div>
-            </Layout>
-          } />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>
     </AuthProvider>

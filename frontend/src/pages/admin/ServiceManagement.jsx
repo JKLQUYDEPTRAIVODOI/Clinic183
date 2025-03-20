@@ -27,26 +27,24 @@ import {
   Delete as DeleteIcon,
   Search as SearchIcon,
   Add as AddIcon,
-  MedicalServices,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import medicineService from '../../services/medicineService';
+import serviceService from '../../services/serviceService';
 
-const MedicineManagement = () => {
+const ServiceManagement = () => {
   const navigate = useNavigate();
   const { hasRole } = useAuth();
-  const [medicines, setMedicines] = useState([]);
+  const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [open, setOpen] = useState(false);
-  const [selectedMedicine, setSelectedMedicine] = useState(null);
+  const [selectedService, setSelectedService] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     price: '',
-    stock: '',
   });
 
   useEffect(() => {
@@ -56,58 +54,56 @@ const MedicineManagement = () => {
   }, [hasRole, navigate]);
 
   useEffect(() => {
-    fetchMedicines();
+    fetchServices();
   }, []);
 
-  const fetchMedicines = async () => {
+  const fetchServices = async () => {
     try {
-      const data = await medicineService.getAllMedicines(); // Sửa dòng 65
-      setMedicines(data);
+      const data = await serviceService.getAllServices(); // Bây giờ sẽ hoạt động
+      setServices(data);
     } catch (err) {
-      console.error('Error fetching medicines:', err); // Sửa thông báo lỗi cho đúng
-      setError(err.message || 'Không thể lấy danh sách thuốc');
+      console.error('Error fetching services:', err);
+      setError(err.message || 'Không thể lấy danh sách dịch vụ');
     }
   };
   
   useEffect(() => {
-    fetchMedicines();
+    fetchServices();
   }, []);
 
-  const searchMedicines = async () => {
+  const searchServices = async () => {
     try {
       setLoading(true);
       setError(null);
       let data;
       if (searchTerm) {
-        data = await medicineService.searchMedicines(searchTerm);
+        data = await serviceService.searchServices(searchTerm);
       } else {
-        data = await medicineService.getAllMedicines();
+        data = await serviceService.getAllServices();
       }
-      setMedicines(data);
+      setServices(data);
     } catch (error) {
-      console.error('Error searching medicines:', error);
-      setError('Không thể tìm kiếm thuốc. Vui lòng thử lại sau.');
+      console.error('Error searching services:', error);
+      setError('Không thể tìm kiếm dịch vụ. Vui lòng thử lại sau.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEditOpen = (medicine = null) => {
-    if (medicine) {
-      setSelectedMedicine(medicine);
+  const handleEditOpen = (service = null) => {
+    if (service) {
+      setSelectedService(service);
       setFormData({
-        name: medicine.name,
-        description: medicine.description || '',
-        price: medicine.price.toString(),
-        stock: medicine.stock.toString(),
+        name: service.name,
+        description: service.description || '',
+        price: service.price.toString(),
       });
     } else {
-      setSelectedMedicine(null);
+      setSelectedService(null);
       setFormData({
         name: '',
         description: '',
         price: '',
-        stock: '0',
       });
     }
     setOpen(true);
@@ -115,7 +111,7 @@ const MedicineManagement = () => {
 
   const handleClose = () => {
     setOpen(false);
-    setSelectedMedicine(null);
+    setSelectedService(null);
   };
 
   const handleInputChange = (e) => {
@@ -132,7 +128,7 @@ const MedicineManagement = () => {
 
   const handleSearchKeyPress = (e) => {
     if (e.key === 'Enter') {
-      searchMedicines();
+      searchServices();
     }
   };
 
@@ -140,80 +136,57 @@ const MedicineManagement = () => {
     e.preventDefault();
 
     // Validate form data
-    if (!formData.name || !formData.price || !formData.stock) {
-      alert('Vui lòng điền đầy đủ thông tin cần thiết');
+    if (!formData.name || !formData.price) {
+      alert('Vui lòng điền đầy đủ tên và giá dịch vụ');
       return;
     }
 
-    // Validate price and stock are numbers
-    if (isNaN(parseFloat(formData.price)) || isNaN(parseInt(formData.stock))) {
-      alert('Giá và số lượng phải là số');
+    // Validate price is a number
+    if (isNaN(parseFloat(formData.price))) {
+      alert('Giá dịch vụ phải là số');
       return;
     }
 
     try {
       setLoading(true);
 
-      const medicineData = {
+      const serviceData = {
         name: formData.name,
         description: formData.description,
         price: parseFloat(formData.price),
-        stock: parseInt(formData.stock),
       };
 
-      if (selectedMedicine) {
-        // Update existing medicine
-        await medicineService.updateMedicine(selectedMedicine.id, medicineData);
+      if (selectedService) {
+        // Update existing service
+        await serviceService.updateService(selectedService.id, serviceData);
       } else {
-        // Create new medicine
-        await medicineService.createMedicine(medicineData);
+        // Create new service
+        await serviceService.createService(serviceData);
       }
 
-      // Refresh medicines list
-      fetchMedicines();
+      // Refresh services list
+      fetchServices();
       handleClose();
     } catch (error) {
-      console.error('Error saving medicine:', error);
-      setError('Lỗi khi lưu thuốc. Vui lòng thử lại sau.');
+      console.error('Error saving service:', error);
+      setError('Lỗi khi lưu dịch vụ. Vui lòng thử lại sau.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa thuốc này?')) {
+    if (window.confirm('Bạn có chắc chắn muốn xóa dịch vụ này?')) {
       try {
         setLoading(true);
-        await medicineService.deleteMedicine(id);
-        fetchMedicines();
+        await serviceService.deleteService(id);
+        fetchServices();
       } catch (error) {
-        console.error('Error deleting medicine:', error);
-        setError('Lỗi khi xóa thuốc. Vui lòng thử lại sau.');
+        console.error('Error deleting service:', error);
+        setError('Lỗi khi xóa dịch vụ. Vui lòng thử lại sau.');
       } finally {
         setLoading(false);
       }
-    }
-  };
-
-  const handleStockUpdate = async (id, quantity) => {
-    const quantityValue = prompt('Nhập số lượng thuốc cần thêm vào kho (nhập số âm để giảm số lượng):', '0');
-    if (quantityValue === null) return;
-
-    const parsedQuantity = parseInt(quantityValue);
-    if (isNaN(parsedQuantity)) {
-      alert('Vui lòng nhập một số hợp lệ');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      await medicineService.updateStock(id, parsedQuantity);
-      fetchMedicines();
-    } catch (error) {
-      console.error('Error updating stock:', error);
-      setError('Lỗi khi cập nhật kho. Vui lòng thử lại sau.');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -230,7 +203,7 @@ const MedicineManagement = () => {
         <Grid item xs={12}>
           <Box display="flex" justifyContent="space-between" alignItems="center">
             <Typography variant="h4" component="h1">
-              Quản lý Thuốc
+              Quản lý Dịch vụ
             </Typography>
             <Button
               variant="contained"
@@ -238,7 +211,7 @@ const MedicineManagement = () => {
               startIcon={<AddIcon />}
               onClick={() => handleEditOpen()}
             >
-              Thêm Thuốc mới
+              Thêm Dịch vụ mới
             </Button>
           </Box>
         </Grid>
@@ -258,14 +231,14 @@ const MedicineManagement = () => {
             <TextField
               fullWidth
               variant="outlined"
-              label="Tìm kiếm thuốc"
+              label="Tìm kiếm dịch vụ"
               value={searchTerm}
               onChange={handleSearchChange}
               onKeyPress={handleSearchKeyPress}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton onClick={searchMedicines} edge="end">
+                    <IconButton onClick={searchServices} edge="end">
                       <SearchIcon />
                     </IconButton>
                   </InputAdornment>
@@ -276,7 +249,7 @@ const MedicineManagement = () => {
           </Box>
         </Grid>
 
-        {/* Medicines Table */}
+        {/* Services Table */}
         <Grid item xs={12}>
           {loading ? (
             <Box display="flex" justifyContent="center" my={3}>
@@ -288,52 +261,42 @@ const MedicineManagement = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell>ID</TableCell>
-                    <TableCell>Tên thuốc</TableCell>
+                    <TableCell>Tên dịch vụ</TableCell>
                     <TableCell>Mô tả</TableCell>
                     <TableCell>Giá</TableCell>
-                    <TableCell>Số lượng trong kho</TableCell>
                     <TableCell>Thao tác</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {medicines.length > 0 ? (
-                    medicines.map((medicine) => (
-                      <TableRow key={medicine.id}>
-                        <TableCell>{medicine.id}</TableCell>
-                        <TableCell>{medicine.name}</TableCell>
-                        <TableCell>{medicine.description || 'Không có mô tả'}</TableCell>
-                        <TableCell>{formatCurrency(medicine.price)}</TableCell>
-                        <TableCell>{medicine.stock}</TableCell>
+                  {services.length > 0 ? (
+                    services.map((service) => (
+                      <TableRow key={service.id}>
+                        <TableCell>{service.id}</TableCell>
+                        <TableCell>{service.name}</TableCell>
+                        <TableCell>{service.description || 'Không có mô tả'}</TableCell>
+                        <TableCell>{formatCurrency(service.price)}</TableCell>
                         <TableCell>
                           <IconButton
                             size="small"
-                            onClick={() => handleEditOpen(medicine)}
+                            onClick={() => handleEditOpen(service)}
                             title="Chỉnh sửa"
                           >
                             <EditIcon />
                           </IconButton>
                           <IconButton
                             size="small"
-                            onClick={() => handleDelete(medicine.id)}
+                            onClick={() => handleDelete(service.id)}
                             title="Xóa"
                           >
                             <DeleteIcon />
                           </IconButton>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            onClick={() => handleStockUpdate(medicine.id)}
-                            sx={{ ml: 1 }}
-                          >
-                            Cập nhật kho
-                          </Button>
                         </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} align="center">
-                        Không có thuốc nào
+                      <TableCell colSpan={5} align="center">
+                        Không có dịch vụ nào
                       </TableCell>
                     </TableRow>
                   )}
@@ -344,16 +307,16 @@ const MedicineManagement = () => {
         </Grid>
       </Grid>
 
-      {/* Edit/Add Medicine Dialog */}
+      {/* Edit/Add Service Dialog */}
       <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
         <DialogTitle>
-          {selectedMedicine ? 'Chỉnh sửa Thuốc' : 'Thêm Thuốc mới'}
+          {selectedService ? 'Chỉnh sửa Dịch vụ' : 'Thêm Dịch vụ mới'}
         </DialogTitle>
         <form onSubmit={handleSubmit}>
           <DialogContent>
             <TextField
               fullWidth
-              label="Tên thuốc"
+              label="Tên dịch vụ"
               name="name"
               value={formData.name}
               onChange={handleInputChange}
@@ -383,19 +346,6 @@ const MedicineManagement = () => {
                 inputProps: { min: 0 },
               }}
             />
-            <TextField
-              fullWidth
-              label="Số lượng trong kho"
-              name="stock"
-              type="number"
-              value={formData.stock}
-              onChange={handleInputChange}
-              margin="normal"
-              required
-              InputProps={{
-                inputProps: { min: 0 },
-              }}
-            />
           </DialogContent>
           <DialogActions>
             <Button onClick={handleClose}>Hủy</Button>
@@ -414,4 +364,4 @@ const MedicineManagement = () => {
   );
 };
 
-export default MedicineManagement; 
+export default ServiceManagement; 

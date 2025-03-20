@@ -16,7 +16,7 @@ export const AuthProvider = ({ children }) => {
         // Check if user is already logged in
         const storedUser = authService.getCurrentUser();
         console.log('Stored user:', storedUser);
-        
+
         if (storedUser) {
           // Verify token validity with backend
           console.log('Verifying token with backend...');
@@ -63,17 +63,34 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     try {
-      setLoading(true);
-      setError(null);
-      const response = await authService.register(userData);
-      setUser(response.user);
-      return response;
-    } catch (err) {
-      console.error('Register error:', err);
-      setError(err.message || 'Đăng ký thất bại');
-      throw err;
-    } finally {
-      setLoading(false);
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      });
+
+      const contentType = response.headers.get('Content-Type');
+      let data;
+
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        throw new Error(`Phản hồi không phải JSON: ${text}`);
+      }
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Đăng ký thất bại');
+      }
+
+      setUser(data.user);
+      localStorage.setItem('token', data.token);
+      return data;
+    } catch (error) {
+      console.error('Register error:', error);
+      throw error;
     }
   };
 
@@ -185,7 +202,7 @@ export const AuthProvider = ({ children }) => {
     resetPassword,
     verifyEmail,
     hasRole,
-    clearError
+    clearError,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -197,4 +214,4 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}; 
+};
