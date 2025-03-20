@@ -3,7 +3,6 @@ import {
   Box,
   Button,
   Container,
-  Grid,
   Paper,
   Typography,
   Table,
@@ -13,7 +12,6 @@ import {
   TableHead,
   TableRow,
   IconButton,
-  Chip,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -25,17 +23,19 @@ import {
   MenuItem,
   Tabs,
   Tab,
+  Alert,
+  CircularProgress,
+  Tooltip,
 } from '@mui/material';
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   LockReset as LockResetIcon,
-  CheckCircle as CheckCircleIcon,
-  Block as BlockIcon,
   Add as AddIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import userService from '../../services/userService';
 
 const UserManagement = () => {
   const navigate = useNavigate();
@@ -46,31 +46,29 @@ const UserManagement = () => {
   const [open, setOpen] = useState(false);
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     role: 'patient',
     password: '',
     confirmPassword: '',
-    status: 'active',
   });
 
   useEffect(() => {
-    // Kiểm tra quyền
     if (!hasRole('admin')) {
       navigate('/login');
     }
   }, [hasRole, navigate]);
 
   useEffect(() => {
-    // TODO: Fetch users data from API
     fetchUsers();
   }, []);
 
   useEffect(() => {
-    // Filter users based on selected tab
     if (tabValue === 0) {
-      setFilteredUsers(users); // All users
+      setFilteredUsers(users);
     } else {
       const roles = ['all', 'admin', 'doctor', 'patient'];
       setFilteredUsers(users.filter(user => user.role === roles[tabValue]));
@@ -79,61 +77,16 @@ const UserManagement = () => {
 
   const fetchUsers = async () => {
     try {
-      // TODO: Implement API call
-      // Using mock data for now
-      const mockData = [
-        {
-          id: 1,
-          name: 'Admin System',
-          email: 'admin@example.com',
-          role: 'admin',
-          status: 'active',
-          lastLogin: '2024-03-19 14:30',
-          createdAt: '2024-01-01',
-        },
-        {
-          id: 2,
-          name: 'Bác sĩ Nguyễn Văn A',
-          email: 'doctor1@example.com',
-          role: 'doctor',
-          status: 'active',
-          specialization: 'Nội khoa',
-          lastLogin: '2024-03-20 08:15',
-          createdAt: '2024-01-15',
-        },
-        {
-          id: 3,
-          name: 'Bác sĩ Trần Thị B',
-          email: 'doctor2@example.com',
-          role: 'doctor',
-          status: 'active',
-          specialization: 'Nhi khoa',
-          lastLogin: '2024-03-19 10:45',
-          createdAt: '2024-01-20',
-        },
-        {
-          id: 4,
-          name: 'Nguyễn Văn C',
-          email: 'patient1@example.com',
-          role: 'patient',
-          status: 'active',
-          lastLogin: '2024-03-18 16:20',
-          createdAt: '2024-02-05',
-        },
-        {
-          id: 5,
-          name: 'Trần Thị D',
-          email: 'patient2@example.com',
-          role: 'patient',
-          status: 'inactive',
-          lastLogin: '2024-03-10 09:30',
-          createdAt: '2024-02-10',
-        },
-      ];
-      setUsers(mockData);
-      setFilteredUsers(mockData);
+      setLoading(true);
+      setError(null);
+      const data = await userService.getAllUsers();
+      setUsers(data);
+      setFilteredUsers(data);
     } catch (error) {
+      setError('Không thể tải danh sách người dùng');
       console.error('Error fetching users:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -150,7 +103,6 @@ const UserManagement = () => {
         role: user.role,
         password: '',
         confirmPassword: '',
-        status: user.status,
       });
     } else {
       setSelectedUser(null);
@@ -160,7 +112,6 @@ const UserManagement = () => {
         role: 'patient',
         password: '',
         confirmPassword: '',
-        status: 'active',
       });
     }
     setOpen(true);
@@ -180,6 +131,7 @@ const UserManagement = () => {
     setOpen(false);
     setResetPasswordOpen(false);
     setSelectedUser(null);
+    setError(null);
   };
 
   const handleInputChange = (e) => {
@@ -190,68 +142,73 @@ const UserManagement = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: Implement API call to create or update user
-    if (selectedUser) {
-      // Update existing user
-      const updatedUsers = users.map((user) =>
-        user.id === selectedUser.id
-          ? { ...user, name: formData.name, email: formData.email, role: formData.role, status: formData.status }
-          : user
-      );
-      setUsers(updatedUsers);
-    } else {
-      // Create new user
-      const newUser = {
-        id: users.length + 1,
-        name: formData.name,
-        email: formData.email,
-        role: formData.role,
-        status: formData.status,
-        lastLogin: '-',
-        createdAt: new Date().toISOString().split('T')[0],
-      };
-      setUsers([...users, newUser]);
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (selectedUser) {
+        await userService.updateUser(selectedUser.id, {
+          name: formData.name,
+          email: formData.email,
+          role: formData.role,
+        });
+      } else {
+        if (formData.password !== formData.confirmPassword) {
+          setError('Mật khẩu không khớp');
+          return;
+        }
+        await userService.createUser({
+          name: formData.name,
+          email: formData.email,
+          role: formData.role,
+          password: formData.password,
+        });
+      }
+      
+      await fetchUsers();
+      handleClose();
+    } catch (error) {
+      setError(error.message || 'Có lỗi xảy ra');
+    } finally {
+      setLoading(false);
     }
-    handleClose();
   };
 
-  const handleResetPassword = (e) => {
+  const handleResetPassword = async (e) => {
     e.preventDefault();
-    // TODO: Implement API call to reset password
-    if (formData.password !== formData.confirmPassword) {
-      alert('Mật khẩu không khớp!');
-      return;
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (formData.password !== formData.confirmPassword) {
+        setError('Mật khẩu không khớp');
+        return;
+      }
+
+      await userService.resetPassword(selectedUser.id, formData.password);
+      handleClose();
+    } catch (error) {
+      setError(error.message || 'Không thể đặt lại mật khẩu');
+    } finally {
+      setLoading(false);
     }
-    alert(`Đã đặt lại mật khẩu cho người dùng: ${selectedUser.name}`);
-    handleClose();
   };
 
-  const handleDelete = (id) => {
-    // TODO: Implement API call to delete user
+  const handleDelete = async (id) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa người dùng này?')) {
-      const updatedUsers = users.filter((user) => user.id !== id);
-      setUsers(updatedUsers);
+      try {
+        setLoading(true);
+        setError(null);
+        await userService.deleteUser(id);
+        await fetchUsers();
+      } catch (error) {
+        setError('Không thể xóa người dùng');
+      } finally {
+        setLoading(false);
+      }
     }
-  };
-
-  const handleToggleStatus = (id) => {
-    // TODO: Implement API call to toggle user status
-    const updatedUsers = users.map((user) =>
-      user.id === id
-        ? { ...user, status: user.status === 'active' ? 'inactive' : 'active' }
-        : user
-    );
-    setUsers(updatedUsers);
-  };
-
-  const getStatusColor = (status) => {
-    return status === 'active' ? 'success' : 'error';
-  };
-
-  const getStatusText = (status) => {
-    return status === 'active' ? 'Hoạt động' : 'Bị khóa';
   };
 
   const getRoleText = (role) => {
@@ -267,274 +224,256 @@ const UserManagement = () => {
     }
   };
 
-  const getRoleColor = (role) => {
-    switch (role) {
-      case 'admin':
-        return 'error';
-      case 'doctor':
-        return 'primary';
-      case 'patient':
-        return 'success';
-      default:
-        return 'default';
-    }
-  };
-
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Typography variant="h4" component="h1">
-              Quản lý Người dùng
-            </Typography>
+    <Container maxWidth={false} sx={{ mt: 4, mb: 4 }}>
+      <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column', width: '100%' }}>
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h5" component="h1" gutterBottom>
+            Quản lý người dùng
+          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, width: '100%' }}>
+            <Tabs
+              value={tabValue}
+              onChange={handleTabChange}
+              sx={{
+                '& .MuiTabs-indicator': {
+                  backgroundColor: 'primary.main',
+                },
+                '& .MuiTab-root': {
+                  textTransform: 'none',
+                  minWidth: 100,
+                  fontSize: '1rem',
+                  fontWeight: 'normal',
+                  '&.Mui-selected': {
+                    color: 'primary.main',
+                    fontWeight: 'bold',
+                  },
+                },
+              }}
+            >
+              <Tab label="TẤT CẢ" />
+              <Tab label="QUẢN TRỊ VIÊN" />
+              <Tab label="BÁC SĨ" />
+              <Tab label="BỆNH NHÂN" />
+            </Tabs>
             <Button
               variant="contained"
               color="primary"
               startIcon={<AddIcon />}
               onClick={() => handleOpen()}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 'bold',
+                borderRadius: 1,
+              }}
             >
-              Thêm Người dùng
+              THÊM NGƯỜI DÙNG
             </Button>
           </Box>
-        </Grid>
+        </Box>
 
-        <Grid item xs={12}>
-          <Paper sx={{ p: 2 }}>
-            <Tabs
-              value={tabValue}
-              onChange={handleTabChange}
-              indicatorColor="primary"
-              textColor="primary"
-              centered
-            >
-              <Tab label="Tất cả" />
-              <Tab label="Quản trị viên" />
-              <Tab label="Bác sĩ" />
-              <Tab label="Bệnh nhân" />
-            </Tabs>
-          </Paper>
-        </Grid>
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-        <Grid item xs={12}>
-          <TableContainer component={Paper}>
-            <Table>
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <TableContainer sx={{ width: '100%', overflowX: 'auto' }}>
+            <Table sx={{ minWidth: '100%' }}>
               <TableHead>
                 <TableRow>
-                  <TableCell>ID</TableCell>
-                  <TableCell>Tên</TableCell>
-                  <TableCell>Email</TableCell>
-                  <TableCell>Vai trò</TableCell>
-                  <TableCell>Trạng thái</TableCell>
-                  <TableCell>Đăng nhập cuối</TableCell>
-                  <TableCell>Ngày tạo</TableCell>
-                  <TableCell>Thao tác</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', fontSize: '1rem', width: { xs: '20%', sm: '25%' } }}>
+                    Tên
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', fontSize: '1rem', width: { xs: '30%', sm: '35%' } }}>
+                    Email
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', fontSize: '1rem', width: { xs: '20%', sm: '20%' } }}>
+                    Vai trò
+                  </TableCell>
+                  <TableCell
+                    align="right"
+                    sx={{ fontWeight: 'bold', fontSize: '1rem', width: { xs: '30%', sm: '20%' } }}
+                  >
+                    Thao tác
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>{user.id}</TableCell>
-                    <TableCell>{user.name}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={getRoleText(user.role)}
-                        color={getRoleColor(user.role)}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={getStatusText(user.status)}
-                        color={getStatusColor(user.status)}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>{user.lastLogin}</TableCell>
-                    <TableCell>{user.createdAt}</TableCell>
-                    <TableCell>
-                      <IconButton
-                        size="small"
-                        color="primary"
-                        onClick={() => handleOpen(user)}
-                        title="Chỉnh sửa"
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        color="secondary"
-                        onClick={() => handleResetPasswordOpen(user)}
-                        title="Đặt lại mật khẩu"
-                      >
-                        <LockResetIcon />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        color={user.status === 'active' ? 'error' : 'success'}
-                        onClick={() => handleToggleStatus(user.id)}
-                        title={user.status === 'active' ? 'Khóa tài khoản' : 'Kích hoạt tài khoản'}
-                      >
-                        {user.status === 'active' ? <BlockIcon /> : <CheckCircleIcon />}
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => handleDelete(user.id)}
-                        title="Xóa"
-                      >
-                        <DeleteIcon />
-                      </IconButton>
+                  <TableRow key={user.id} hover>
+                    <TableCell sx={{ width: { xs: '20%', sm: '25%' } }}>{user.name}</TableCell>
+                    <TableCell sx={{ width: { xs: '30%', sm: '35%' } }}>{user.email}</TableCell>
+                    <TableCell sx={{ width: { xs: '20%', sm: '20%' } }}>{getRoleText(user.role)}</TableCell>
+                    <TableCell align="right" sx={{ width: { xs: '30%', sm: '20%' } }}>
+                      <Tooltip title="Chỉnh sửa">
+                        <IconButton onClick={() => handleOpen(user)} color="primary" size="small">
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Đặt lại mật khẩu">
+                        <IconButton onClick={() => handleResetPasswordOpen(user)} color="warning" size="small">
+                          <LockResetIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Xóa">
+                        <IconButton onClick={() => handleDelete(user.id)} color="error" size="small">
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </TableContainer>
-        </Grid>
-      </Grid>
+        )}
+      </Paper>
 
-      {/* Add/Edit User Dialog */}
+      {/* Dialog for Add/Edit User */}
       <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {selectedUser ? 'Chỉnh sửa Người dùng' : 'Thêm Người dùng mới'}
+        <DialogTitle sx={{ pb: 1 }}>
+          {selectedUser ? 'Chỉnh sửa người dùng' : 'Thêm người dùng mới'}
         </DialogTitle>
         <form onSubmit={handleSubmit}>
-          <DialogContent>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
+          <DialogContent sx={{ pb: 2 }}>
+            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+            <TextField
+              margin="dense"
+              label="Tên"
+              type="text"
+              fullWidth
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              required
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              margin="dense"
+              label="Email"
+              type="email"
+              fullWidth
+              name="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              required
+              sx={{ mb: 2 }}
+            />
+            <FormControl fullWidth margin="dense" sx={{ mb: 2 }}>
+              <InputLabel>Vai trò</InputLabel>
+              <Select
+                name="role"
+                value={formData.role}
+                onChange={handleInputChange}
+                label="Vai trò"
+                required
+              >
+                <MenuItem value="admin">Quản trị viên</MenuItem>
+                <MenuItem value="doctor">Bác sĩ</MenuItem>
+                <MenuItem value="patient">Bệnh nhân</MenuItem>
+              </Select>
+            </FormControl>
+            {!selectedUser && (
+              <>
                 <TextField
+                  margin="dense"
+                  label="Mật khẩu"
+                  type="password"
                   fullWidth
-                  label="Họ tên"
-                  name="name"
-                  value={formData.name}
+                  name="password"
+                  value={formData.password}
                   onChange={handleInputChange}
-                  margin="normal"
+                  required
+                  sx={{ mb: 2 }}
+                />
+                <TextField
+                  margin="dense"
+                  label="Xác nhận mật khẩu"
+                  type="password"
+                  fullWidth
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
                   required
                 />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  margin="normal"
-                  required
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth margin="normal">
-                  <InputLabel>Vai trò</InputLabel>
-                  <Select
-                    name="role"
-                    value={formData.role}
-                    onChange={handleInputChange}
-                    required
-                  >
-                    <MenuItem value="admin">Quản trị viên</MenuItem>
-                    <MenuItem value="doctor">Bác sĩ</MenuItem>
-                    <MenuItem value="patient">Bệnh nhân</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth margin="normal">
-                  <InputLabel>Trạng thái</InputLabel>
-                  <Select
-                    name="status"
-                    value={formData.status}
-                    onChange={handleInputChange}
-                    required
-                  >
-                    <MenuItem value="active">Hoạt động</MenuItem>
-                    <MenuItem value="inactive">Bị khóa</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              {!selectedUser && (
-                <>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      label="Mật khẩu"
-                      name="password"
-                      type="password"
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      margin="normal"
-                      required
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      label="Xác nhận mật khẩu"
-                      name="confirmPassword"
-                      type="password"
-                      value={formData.confirmPassword}
-                      onChange={handleInputChange}
-                      margin="normal"
-                      required
-                    />
-                  </Grid>
-                </>
-              )}
-            </Grid>
+              </>
+            )}
           </DialogContent>
-          <DialogActions>
-            <Button onClick={handleClose}>Hủy</Button>
-            <Button type="submit" variant="contained" color="primary">
-              {selectedUser ? 'Cập nhật' : 'Tạo mới'}
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button 
+              onClick={handleClose}
+              sx={{ 
+                textTransform: 'none',
+                fontWeight: 'bold',
+              }}
+            >
+              Hủy
+            </Button>
+            <Button 
+              type="submit" 
+              variant="contained" 
+              disabled={loading}
+              sx={{ 
+                textTransform: 'none',
+                fontWeight: 'bold',
+              }}
+            >
+              {loading ? <CircularProgress size={24} /> : 'Lưu'}
             </Button>
           </DialogActions>
         </form>
       </Dialog>
 
-      {/* Reset Password Dialog */}
+      {/* Dialog for Reset Password */}
       <Dialog open={resetPasswordOpen} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogTitle>Đặt lại mật khẩu</DialogTitle>
+        <DialogTitle sx={{ pb: 1 }}>Đặt lại mật khẩu</DialogTitle>
         <form onSubmit={handleResetPassword}>
-          <DialogContent>
-            {selectedUser && (
-              <Typography variant="subtitle1" gutterBottom>
-                Đặt lại mật khẩu cho: {selectedUser.name} ({selectedUser.email})
-              </Typography>
-            )}
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Mật khẩu mới"
-                  name="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  margin="normal"
-                  required
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Xác nhận mật khẩu mới"
-                  name="confirmPassword"
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  margin="normal"
-                  required
-                />
-              </Grid>
-            </Grid>
+          <DialogContent sx={{ pb: 2 }}>
+            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+            <TextField
+              margin="dense"
+              label="Mật khẩu mới"
+              type="password"
+              fullWidth
+              name="password"
+              value={formData.password}
+              onChange={handleInputChange}
+              required
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              margin="dense"
+              label="Xác nhận mật khẩu mới"
+              type="password"
+              fullWidth
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleInputChange}
+              required
+            />
           </DialogContent>
-          <DialogActions>
-            <Button onClick={handleClose}>Hủy</Button>
-            <Button type="submit" variant="contained" color="primary">
-              Đặt lại mật khẩu
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button 
+              onClick={handleClose}
+              sx={{ 
+                textTransform: 'none',
+                fontWeight: 'bold',
+              }}
+            >
+              Hủy
+            </Button>
+            <Button 
+              type="submit" 
+              variant="contained" 
+              disabled={loading}
+              sx={{ 
+                textTransform: 'none',
+                fontWeight: 'bold',
+              }}
+            >
+              {loading ? <CircularProgress size={24} /> : 'Lưu'}
             </Button>
           </DialogActions>
         </form>
@@ -543,4 +482,4 @@ const UserManagement = () => {
   );
 };
 
-export default UserManagement; 
+export default UserManagement;

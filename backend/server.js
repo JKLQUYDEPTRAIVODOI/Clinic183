@@ -7,6 +7,7 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 // Import routes
+const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const invoiceRoutes = require('./routes/invoiceRoutes');
 const patientRoutes = require('./routes/patientRoutes');
@@ -29,8 +30,8 @@ app.get('/', (req, res) => {
 });
 
 // Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/auth', userRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/api/services', serviceRoutes);
