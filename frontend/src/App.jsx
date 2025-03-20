@@ -33,7 +33,7 @@ import ServiceManagement from './pages/admin/ServiceManagement';
 // Doctor Pages
 import DoctorDashboard from './pages/doctor/Dashboard';
 import DoctorProfile from './pages/doctor/Profile';
-import DoctorAppointments from './pages/doctor/Appointments';
+import DoctorAppointmentsNew from './pages/doctor/DoctorAppointmentsNew';
 import PatientRecords from './pages/doctor/PatientRecords';
 import DoctorPrescriptions from './pages/doctor/Prescriptions';
 import Schedule from './pages/doctor/Schedule';
@@ -165,7 +165,7 @@ function App() {
         <Route path="/doctor">
           <Route index element={<DoctorDashboard />} />
           <Route path="profile" element={<DoctorProfile />} />
-          <Route path="appointments" element={<DoctorAppointments />} />
+          <Route path="appointments" element={<DoctorAppointmentsNew />} />
           <Route path="patients" element={<PatientRecords />} />
           <Route path="prescriptions" element={<DoctorPrescriptions />} />
           <Route path="schedule" element={<Schedule />} />
