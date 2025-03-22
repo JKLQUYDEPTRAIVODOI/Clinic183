@@ -16,6 +16,7 @@ const medicineRoutes = require('./routes/medicineRoutes');
 const appointmentRoutes = require('./routes/appointmentRoutes');
 const doctorRoutes = require('./routes/doctorRoutes');
 const medicalRecordRoutes = require('./routes/medicalRecordRoutes');
+const revenueRoutes = require('./routes/revenueRoutes');
 
 // Create Express app
 const app = express();
@@ -40,6 +41,7 @@ app.use('/api/medicines', medicineRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/doctors', doctorRoutes);
 app.use('/api/medical-records', medicalRecordRoutes);
+app.use('/api/revenue', revenueRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
