@@ -16,7 +16,8 @@ import {
   Person as PatientIcon,
   Event as AppointmentIcon,
   Receipt as InvoiceIcon,
-  MedicalServices as DiagnosesIcon
+  MedicalServices as DiagnosesIcon,
+  History as HistoryIcon
 } from '@mui/icons-material';
 
 const AdminSidebar = () => {
@@ -29,7 +30,8 @@ const AdminSidebar = () => {
     { text: 'Patients', icon: <PatientIcon />, path: '/admin/patients' },
     { text: 'Appointments', icon: <AppointmentIcon />, path: '/admin/appointments' },
     { text: 'Invoices', icon: <InvoiceIcon />, path: '/admin/invoices' },
-    { text: 'Diagnoses', icon: <DiagnosesIcon />, path: '/admin/diagnoses' }
+    { text: 'Diagnoses', icon: <DiagnosesIcon />, path: '/admin/diagnoses' },
+    { text: 'Medical Records', icon: <HistoryIcon />, path: '/admin/medical-records' }
   ];
 
   return (

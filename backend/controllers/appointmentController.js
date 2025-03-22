@@ -200,7 +200,9 @@ exports.updateAppointmentStatus = async (req, res) => {
     const id = req.params.id;
     const { status } = req.body;
     
-    if (!status || !['pending', 'accepted', 'completed', 'rejected'].includes(status)) {
+    // Validate status
+    const validStatuses = ['pending', 'accepted', 'completed', 'rejected', 'cancelled'];
+    if (!status || !validStatuses.includes(status)) {
       return res.status(400).json({ message: 'Valid status is required' });
     }
     
@@ -210,11 +212,27 @@ exports.updateAppointmentStatus = async (req, res) => {
       return res.status(404).json({ message: 'Appointment not found' });
     }
     
-    // Authorization check - Only admin or doctor can update status
-    if (
-      req.user.role !== 'admin' && 
-      appointment.doctor_id !== req.doctor?.id
-    ) {
+    // Authorization check
+    // - Admin can update to any status
+    // - Doctor can update to accepted, completed, or rejected
+    // - Patient can only update to cancelled
+    if (req.user.role === 'admin') {
+      // Admin can update to any status
+    } else if (req.user.role === 'doctor' && appointment.doctor_id === req.doctor?.id) {
+      // Doctor can only update their own appointments to accepted, completed, or rejected
+      if (!['accepted', 'completed', 'rejected'].includes(status)) {
+        return res.status(403).json({ message: 'Doctors can only accept, complete, or reject appointments' });
+      }
+    } else if (req.user.role === 'patient' && appointment.patient_id === req.patient?.id) {
+      // Patient can only cancel their own appointments
+      if (status !== 'cancelled') {
+        return res.status(403).json({ message: 'Patients can only cancel appointments' });
+      }
+      // Check if appointment is already completed or cancelled
+      if (['completed', 'cancelled'].includes(appointment.status)) {
+        return res.status(400).json({ message: 'Cannot cancel completed or already cancelled appointments' });
+      }
+    } else {
       return res.status(403).json({ message: 'Not authorized' });
     }
     
