@@ -10,12 +10,20 @@ const revenueController = {
       const [summary] = await db.query(`
         SELECT 
           COUNT(DISTINCT i.id) as totalInvoices,
-          SUM(CASE WHEN i.payment_status = 'paid' THEN i.total_amount ELSE 0 END) as totalRevenue,
-          COUNT(DISTINCT CASE WHEN i.payment_status = 'paid' THEN i.id END) as paidInvoices,
-          COUNT(DISTINCT ii.id) as totalItems
+          SUM(i.total_amount) as totalRevenue
         FROM invoices i
-        LEFT JOIN invoice_items ii ON i.id = ii.invoice_id
-        WHERE i.created_at BETWEEN ? AND ?
+        WHERE i.payment_status = 'paid'
+        AND i.payment_date BETWEEN ? AND ?
+      `, [startDate, endDate]);
+
+      // Query tổng số items
+      const [itemSummary] = await db.query(`
+        SELECT 
+          SUM(ii.quantity) as totalItems
+        FROM invoices i
+        JOIN invoice_items ii ON i.id = ii.invoice_id
+        WHERE i.payment_status = 'paid'
+        AND i.payment_date BETWEEN ? AND ?
       `, [startDate, endDate]);
 
       // Query doanh thu kỳ trước để tính tăng trưởng
@@ -27,24 +35,32 @@ const revenueController = {
 
       const [previousSummary] = await db.query(`
         SELECT 
-          SUM(CASE WHEN payment_status = 'paid' THEN total_amount ELSE 0 END) as previousRevenue
+          SUM(total_amount) as previousRevenue
         FROM invoices
-        WHERE created_at BETWEEN ? AND ?
+        WHERE payment_status = 'paid'
+        AND payment_date BETWEEN ? AND ?
       `, [previousStartDate, previousEndDate]);
 
-      const { totalInvoices, totalRevenue, paidInvoices, totalItems } = summary[0];
-      const previousRevenue = previousSummary[0].previousRevenue || 0;
+      // Lấy dữ liệu từ kết quả query
+      const {
+        totalInvoices = 0,
+        totalRevenue = 0
+      } = summary[0] || {};
+
+      const totalItems = Number(itemSummary[0]?.totalItems) || 0;
+      const previousRevenue = Number(previousSummary[0]?.previousRevenue) || 0;
       
+      // Tính tỷ lệ tăng trưởng
       const growthRate = previousRevenue > 0 
         ? ((totalRevenue - previousRevenue) / previousRevenue) * 100 
         : 0;
 
       res.json({
-        totalRevenue: totalRevenue || 0,
-        totalInvoices: totalInvoices || 0,
-        totalItems: totalItems || 0,
-        avgPerInvoice: paidInvoices > 0 ? totalRevenue / paidInvoices : 0,
-        paymentRate: totalInvoices > 0 ? (paidInvoices / totalInvoices) * 100 : 0,
+        totalRevenue: Number(totalRevenue),
+        totalInvoices: Number(totalInvoices),
+        totalItems: totalItems,
+        avgPerInvoice: Number(totalInvoices) > 0 ? Number(totalRevenue) / Number(totalInvoices) : 0,
+        paymentRate: 100, // Vì chỉ lấy hóa đơn đã thanh toán
         growthRate: Math.round(growthRate * 10) / 10
       });
     } catch (error) {
@@ -75,16 +91,21 @@ const revenueController = {
 
       const [data] = await db.query(`
         SELECT 
-          DATE_FORMAT(i.created_at, ?) as time,
-          SUM(CASE WHEN i.payment_status = 'paid' THEN i.total_amount ELSE 0 END) as value,
+          DATE_FORMAT(i.payment_date, ?) as time,
+          SUM(i.total_amount) as value,
           COUNT(DISTINCT i.id) as invoiceCount
         FROM invoices i
-        WHERE i.created_at BETWEEN ? AND ?
+        WHERE i.payment_status = 'paid'
+        AND i.payment_date BETWEEN ? AND ?
         GROUP BY time
         ORDER BY time ASC
       `, [timeFormat, startDate, endDate]);
 
-      res.json(data);
+      res.json(data.map(row => ({
+        ...row,
+        value: Number(row.value) || 0,
+        invoiceCount: Number(row.invoiceCount) || 0
+      })));
     } catch (error) {
       console.error('Error in getRevenueByTime:', error);
       res.status(500).json({ message: 'Internal server error' });
@@ -100,19 +121,23 @@ const revenueController = {
         SELECT 
           s.name,
           COUNT(DISTINCT i.id) as invoiceCount,
-          SUM(CASE WHEN i.payment_status = 'paid' THEN ii.price * ii.quantity ELSE 0 END) as value
-        FROM invoice_items ii
-        JOIN invoices i ON i.id = ii.invoice_id
+          SUM(ii.subtotal) as value
+        FROM invoices i
+        JOIN invoice_items ii ON i.id = ii.invoice_id
         JOIN services s ON s.id = ii.item_id
-        WHERE 
-          ii.item_type = 'service'
-          AND i.created_at BETWEEN ? AND ?
+        WHERE i.payment_status = 'paid'
+        AND ii.item_type = 'service'
+        AND i.payment_date BETWEEN ? AND ?
         GROUP BY s.id, s.name
         ORDER BY value DESC
         LIMIT 5
       `, [startDate, endDate]);
 
-      res.json(data);
+      res.json(data.map(row => ({
+        ...row,
+        value: Number(row.value) || 0,
+        invoiceCount: Number(row.invoiceCount) || 0
+      })));
     } catch (error) {
       console.error('Error in getRevenueByService:', error);
       res.status(500).json({ message: 'Internal server error' });
@@ -128,21 +153,23 @@ const revenueController = {
         SELECT 
           u.name,
           COUNT(DISTINCT i.id) as invoiceCount,
-          SUM(CASE WHEN i.payment_status = 'paid' THEN i.total_amount ELSE 0 END) as value
+          SUM(i.total_amount) as value
         FROM invoices i
-        JOIN patients p ON p.id = i.patient_id
-        JOIN appointments a ON a.patient_id = p.id
+        JOIN appointments a ON a.id = i.appointment_id
         JOIN doctors d ON d.id = a.doctor_id
         JOIN users u ON u.id = d.user_id
-        WHERE 
-          a.status = 'completed'
-          AND i.created_at BETWEEN ? AND ?
+        WHERE i.payment_status = 'paid'
+        AND i.payment_date BETWEEN ? AND ?
         GROUP BY d.id, u.name
         ORDER BY value DESC
         LIMIT 5
       `, [startDate, endDate]);
 
-      res.json(data);
+      res.json(data.map(row => ({
+        ...row,
+        value: Number(row.value) || 0,
+        invoiceCount: Number(row.invoiceCount) || 0
+      })));
     } catch (error) {
       console.error('Error in getRevenueByDoctor:', error);
       res.status(500).json({ message: 'Internal server error' });

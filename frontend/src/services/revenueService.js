@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'http://localhost:5000/api/revenue';
 
-// Request interceptor để thêm token vào header
+// Add request interceptor to include auth token
 axios.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -20,12 +20,12 @@ const revenueService = {
   // Lấy tổng quan doanh thu
   getRevenueSummary: async (startDate, endDate) => {
     try {
-      const response = await axios.get(`${API_URL}/revenue/summary`, {
+      const response = await axios.get(`${API_URL}/summary`, {
         params: { startDate, endDate }
       });
       return response.data;
     } catch (error) {
-      console.error('Error getting revenue summary:', error);
+      console.error('Error fetching revenue summary:', error);
       throw error;
     }
   },
@@ -33,12 +33,12 @@ const revenueService = {
   // Lấy doanh thu theo thời gian
   getRevenueByTime: async (startDate, endDate, groupBy = 'month') => {
     try {
-      const response = await axios.get(`${API_URL}/revenue/by-time`, {
+      const response = await axios.get(`${API_URL}/by-time`, {
         params: { startDate, endDate, groupBy }
       });
       return response.data;
     } catch (error) {
-      console.error('Error getting revenue by time:', error);
+      console.error('Error fetching revenue by time:', error);
       throw error;
     }
   },
@@ -46,12 +46,12 @@ const revenueService = {
   // Lấy doanh thu theo dịch vụ
   getRevenueByService: async (startDate, endDate) => {
     try {
-      const response = await axios.get(`${API_URL}/revenue/by-service`, {
+      const response = await axios.get(`${API_URL}/by-service`, {
         params: { startDate, endDate }
       });
       return response.data;
     } catch (error) {
-      console.error('Error getting revenue by service:', error);
+      console.error('Error fetching revenue by service:', error);
       throw error;
     }
   },
@@ -59,12 +59,12 @@ const revenueService = {
   // Lấy doanh thu theo bác sĩ
   getRevenueByDoctor: async (startDate, endDate) => {
     try {
-      const response = await axios.get(`${API_URL}/revenue/by-doctor`, {
+      const response = await axios.get(`${API_URL}/by-doctor`, {
         params: { startDate, endDate }
       });
       return response.data;
     } catch (error) {
-      console.error('Error getting revenue by doctor:', error);
+      console.error('Error fetching revenue by doctor:', error);
       throw error;
     }
   }

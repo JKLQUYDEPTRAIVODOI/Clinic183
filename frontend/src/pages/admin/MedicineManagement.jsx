@@ -21,6 +21,7 @@ import {
   CircularProgress,
   Alert,
   InputAdornment,
+  MenuItem,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -32,6 +33,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import medicineService from '../../services/medicineService';
+
+const UNITS = ['Viên', 'Ống', 'Chai', 'Gói', 'Hộp'];
 
 const MedicineManagement = () => {
   const navigate = useNavigate();
@@ -45,8 +48,9 @@ const MedicineManagement = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    unit: 'Viên',
     price: '',
-    stock: '',
+    unit_in_stock: ''
   });
 
   useEffect(() => {
@@ -61,17 +65,13 @@ const MedicineManagement = () => {
 
   const fetchMedicines = async () => {
     try {
-      const data = await medicineService.getAllMedicines(); // Sửa dòng 65
+      const data = await medicineService.getAllMedicines();
       setMedicines(data);
     } catch (err) {
-      console.error('Error fetching medicines:', err); // Sửa thông báo lỗi cho đúng
+      console.error('Error fetching medicines:', err);
       setError(err.message || 'Không thể lấy danh sách thuốc');
     }
   };
-  
-  useEffect(() => {
-    fetchMedicines();
-  }, []);
 
   const searchMedicines = async () => {
     try {
@@ -98,16 +98,18 @@ const MedicineManagement = () => {
       setFormData({
         name: medicine.name,
         description: medicine.description || '',
+        unit: medicine.unit || 'Viên',
         price: medicine.price.toString(),
-        stock: medicine.stock.toString(),
+        unit_in_stock: medicine.unit_in_stock.toString()
       });
     } else {
       setSelectedMedicine(null);
       setFormData({
         name: '',
         description: '',
+        unit: 'Viên',
         price: '',
-        stock: '0',
+        unit_in_stock: ''
       });
     }
     setOpen(true);
@@ -140,13 +142,14 @@ const MedicineManagement = () => {
     e.preventDefault();
 
     // Validate form data
-    if (!formData.name || !formData.price || !formData.stock) {
+    if (!formData.name || !formData.price || !formData.unit_in_stock) {
       alert('Vui lòng điền đầy đủ thông tin cần thiết');
       return;
     }
 
-    // Validate price and stock are numbers
-    if (isNaN(parseFloat(formData.price)) || isNaN(parseInt(formData.stock))) {
+    // Validate numeric fields
+    if (isNaN(parseFloat(formData.price)) || 
+        isNaN(parseInt(formData.unit_in_stock))) {
       alert('Giá và số lượng phải là số');
       return;
     }
@@ -157,19 +160,17 @@ const MedicineManagement = () => {
       const medicineData = {
         name: formData.name,
         description: formData.description,
+        unit: formData.unit,
         price: parseFloat(formData.price),
-        stock: parseInt(formData.stock),
+        unit_in_stock: parseInt(formData.unit_in_stock)
       };
 
       if (selectedMedicine) {
-        // Update existing medicine
         await medicineService.updateMedicine(selectedMedicine.id, medicineData);
       } else {
-        // Create new medicine
         await medicineService.createMedicine(medicineData);
       }
 
-      // Refresh medicines list
       fetchMedicines();
       handleClose();
     } catch (error) {
@@ -195,13 +196,20 @@ const MedicineManagement = () => {
     }
   };
 
-  const handleStockUpdate = async (id, quantity) => {
+  const handleStockUpdate = async (id, currentStock) => {
     const quantityValue = prompt('Nhập số lượng thuốc cần thêm vào kho (nhập số âm để giảm số lượng):', '0');
     if (quantityValue === null) return;
 
     const parsedQuantity = parseInt(quantityValue);
     if (isNaN(parsedQuantity)) {
       alert('Vui lòng nhập một số hợp lệ');
+      return;
+    }
+
+    const newStock = currentStock + parsedQuantity;
+    
+    if (newStock < 0) {
+      alert('Số lượng trong kho không thể âm');
       return;
     }
 
@@ -290,9 +298,10 @@ const MedicineManagement = () => {
                     <TableCell>ID</TableCell>
                     <TableCell>Tên thuốc</TableCell>
                     <TableCell>Mô tả</TableCell>
-                    <TableCell>Giá</TableCell>
-                    <TableCell>Số lượng trong kho</TableCell>
-                    <TableCell>Thao tác</TableCell>
+                    <TableCell>Đơn vị</TableCell>
+                    <TableCell align="right">Giá</TableCell>
+                    <TableCell align="right">Số lượng trong kho</TableCell>
+                    <TableCell align="center">Thao tác</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -301,29 +310,27 @@ const MedicineManagement = () => {
                       <TableRow key={medicine.id}>
                         <TableCell>{medicine.id}</TableCell>
                         <TableCell>{medicine.name}</TableCell>
-                        <TableCell>{medicine.description || 'Không có mô tả'}</TableCell>
-                        <TableCell>{formatCurrency(medicine.price)}</TableCell>
-                        <TableCell>{medicine.stock}</TableCell>
-                        <TableCell>
+                        <TableCell>{medicine.description}</TableCell>
+                        <TableCell>{medicine.unit}</TableCell>
+                        <TableCell align="right">{formatCurrency(medicine.price)}</TableCell>
+                        <TableCell align="right">{medicine.unit_in_stock}</TableCell>
+                        <TableCell align="center">
                           <IconButton
-                            size="small"
+                            color="primary"
                             onClick={() => handleEditOpen(medicine)}
-                            title="Chỉnh sửa"
                           >
                             <EditIcon />
                           </IconButton>
                           <IconButton
-                            size="small"
+                            color="error"
                             onClick={() => handleDelete(medicine.id)}
-                            title="Xóa"
                           >
                             <DeleteIcon />
                           </IconButton>
                           <Button
-                            size="small"
                             variant="outlined"
-                            onClick={() => handleStockUpdate(medicine.id)}
-                            sx={{ ml: 1 }}
+                            size="small"
+                            onClick={() => handleStockUpdate(medicine.id, medicine.unit_in_stock)}
                           >
                             Cập nhật kho
                           </Button>
@@ -371,8 +378,24 @@ const MedicineManagement = () => {
               rows={3}
             />
             <TextField
+              select
               fullWidth
-              label="Giá (VNĐ)"
+              label="Đơn vị"
+              name="unit"
+              value={formData.unit}
+              onChange={handleInputChange}
+              margin="normal"
+              required
+            >
+              {UNITS.map((unit) => (
+                <MenuItem key={unit} value={unit}>
+                  {unit}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              fullWidth
+              label="Giá"
               name="price"
               type="number"
               value={formData.price}
@@ -380,21 +403,18 @@ const MedicineManagement = () => {
               margin="normal"
               required
               InputProps={{
-                inputProps: { min: 0 },
+                endAdornment: <InputAdornment position="end">VNĐ</InputAdornment>,
               }}
             />
             <TextField
               fullWidth
               label="Số lượng trong kho"
-              name="stock"
+              name="unit_in_stock"
               type="number"
-              value={formData.stock}
+              value={formData.unit_in_stock}
               onChange={handleInputChange}
               margin="normal"
               required
-              InputProps={{
-                inputProps: { min: 0 },
-              }}
             />
           </DialogContent>
           <DialogActions>

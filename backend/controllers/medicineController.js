@@ -49,7 +49,7 @@ exports.searchMedicines = async (req, res) => {
 // Tạo thuốc mới
 exports.createMedicine = async (req, res) => {
   try {
-    const { name, description, price, stock } = req.body;
+    const { name, description, price, unit_in_stock, unit } = req.body;
     
     // Validate input
     if (!name || !price) {
@@ -60,7 +60,8 @@ exports.createMedicine = async (req, res) => {
       name,
       description: description || '',
       price: parseFloat(price),
-      stock: parseInt(stock) || 0
+      unit_in_stock: parseInt(unit_in_stock) || 0,
+      unit: unit || 'Viên'
     });
     
     const newMedicine = await Medicine.getById(medicineId);
@@ -75,7 +76,7 @@ exports.createMedicine = async (req, res) => {
 exports.updateMedicine = async (req, res) => {
   try {
     const medicineId = req.params.id;
-    const { name, description, price, stock } = req.body;
+    const { name, description, price, unit_in_stock, unit } = req.body;
     
     // Validate input
     if (!name || !price) {
@@ -91,7 +92,8 @@ exports.updateMedicine = async (req, res) => {
       name,
       description: description || '',
       price: parseFloat(price),
-      stock: parseInt(stock) || 0
+      unit_in_stock: parseInt(unit_in_stock) || 0,
+      unit: unit || 'Viên'
     });
     
     const updatedMedicine = await Medicine.getById(medicineId);

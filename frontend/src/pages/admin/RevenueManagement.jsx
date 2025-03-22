@@ -80,7 +80,7 @@ const RevenueManagement = () => {
 
   useEffect(() => {
     if (startDate && endDate) {
-      fetchRevenueData();
+    fetchRevenueData();
     }
   }, [startDate, endDate]);
 
@@ -172,30 +172,30 @@ const RevenueManagement = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      {/* Header */}
+        {/* Header */}
       <Box mb={4}>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
           <Typography variant="h4" component="h1" gutterBottom>
-            Thống kê Doanh thu
-          </Typography>
+              Thống kê Doanh thu
+            </Typography>
           <Stack direction="row" spacing={2} alignItems="center">
-            <FormControl sx={{ minWidth: 120 }}>
-              <InputLabel>Thời gian</InputLabel>
-              <Select
-                value={timeRange}
-                label="Thời gian"
-                onChange={handleTimeRangeChange}
-              >
-                <MenuItem value="day">Hôm nay</MenuItem>
-                <MenuItem value="week">Tuần này</MenuItem>
-                <MenuItem value="month">Tháng này</MenuItem>
-                <MenuItem value="year">Năm nay</MenuItem>
-                <MenuItem value="custom">Tùy chỉnh</MenuItem>
-              </Select>
-            </FormControl>
-            
-            {timeRange === 'custom' && (
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <FormControl sx={{ minWidth: 120 }}>
+                <InputLabel>Thời gian</InputLabel>
+                <Select
+                  value={timeRange}
+                  label="Thời gian"
+                  onChange={handleTimeRangeChange}
+                >
+                  <MenuItem value="day">Hôm nay</MenuItem>
+                  <MenuItem value="week">Tuần này</MenuItem>
+                  <MenuItem value="month">Tháng này</MenuItem>
+                  <MenuItem value="year">Năm nay</MenuItem>
+                  <MenuItem value="custom">Tùy chỉnh</MenuItem>
+                </Select>
+              </FormControl>
+              
+              {timeRange === 'custom' && (
+                <LocalizationProvider dateAdapter={AdapterDateFns}>
                 <Stack direction="row" spacing={2}>
                   <DatePicker
                     label="Từ ngày"
@@ -208,38 +208,38 @@ const RevenueManagement = () => {
                     onChange={(newValue) => setEndDate(newValue)}
                   />
                 </Stack>
-              </LocalizationProvider>
-            )}
-            
-            <Button
-              variant="contained"
-              color="primary"
+                </LocalizationProvider>
+              )}
+              
+              <Button
+                variant="contained"
+                color="primary"
               startIcon={<FileDownloadIcon />}
-              onClick={handleExportReport}
-            >
-              Xuất báo cáo
-            </Button>
+                onClick={handleExportReport}
+              >
+                Xuất báo cáo
+              </Button>
           </Stack>
         </Stack>
-      </Box>
+          </Box>
 
-      {/* Summary Cards */}
+        {/* Summary Cards */}
       <Grid container spacing={3} mb={4}>
         <Grid item xs={12} md={3}>
           <Card>
             <CardContent>
               <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
                 <Typography variant="h6" color="text.secondary">
-                  Tổng doanh thu
-                </Typography>
+              Tổng doanh thu
+            </Typography>
                 <TrendingUpIcon color={summary.growthRate >= 0 ? "success" : "error"} />
               </Stack>
               <Typography variant="h4" component="div" gutterBottom>
-                {formatCurrency(summary.totalRevenue)}
-              </Typography>
-              <Typography variant="body2" sx={{ color: summary.growthRate >= 0 ? 'success.main' : 'error.main' }}>
-                {summary.growthRate >= 0 ? '+' : ''}{summary.growthRate}% so với kỳ trước
-              </Typography>
+              {formatCurrency(summary.totalRevenue)}
+            </Typography>
+            <Typography variant="body2" sx={{ color: summary.growthRate >= 0 ? 'success.main' : 'error.main' }}>
+              {summary.growthRate >= 0 ? '+' : ''}{summary.growthRate}% so với kỳ trước
+            </Typography>
             </CardContent>
           </Card>
         </Grid>
@@ -250,12 +250,12 @@ const RevenueManagement = () => {
               <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
                 <Typography variant="h6" color="text.secondary">
                   Số hóa đơn
-                </Typography>
+            </Typography>
                 <ReceiptIcon color="primary" />
               </Stack>
               <Typography variant="h4" component="div" gutterBottom>
-                {summary.totalInvoices}
-              </Typography>
+              {summary.totalInvoices}
+            </Typography>
               <Typography variant="body2" color="text.secondary">
                 Tỷ lệ thanh toán: {summary.paymentRate.toFixed(1)}%
               </Typography>
@@ -274,10 +274,10 @@ const RevenueManagement = () => {
               </Stack>
               <Typography variant="h4" component="div" gutterBottom>
                 {summary.totalItems}
-              </Typography>
+            </Typography>
               <Typography variant="body2" color="text.secondary">
                 Trung bình {(summary.totalItems / summary.totalInvoices || 0).toFixed(1)} mục/hóa đơn
-              </Typography>
+            </Typography>
             </CardContent>
           </Card>
         </Grid>
@@ -293,23 +293,23 @@ const RevenueManagement = () => {
               </Stack>
               <Typography variant="h4" component="div" gutterBottom>
                 {formatCurrency(summary.avgPerInvoice)}
-              </Typography>
+            </Typography>
               <Typography variant="body2" color="text.secondary">
                 Cho hóa đơn đã thanh toán
-              </Typography>
+            </Typography>
             </CardContent>
           </Card>
         </Grid>
-      </Grid>
+        </Grid>
 
-      {/* Revenue Chart */}
+        {/* Revenue Chart */}
       <Paper sx={{ p: 3, mb: 4 }}>
-        <Typography variant="h6" gutterBottom>
-          Doanh thu theo thời gian
-        </Typography>
+            <Typography variant="h6" gutterBottom>
+              Doanh thu theo thời gian
+            </Typography>
         <ResponsiveContainer width="100%" height={400}>
           <LineChart data={revenueData}>
-            <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" />
             <XAxis 
               dataKey="name"
               tick={{ fill: '#666' }}
@@ -324,19 +324,19 @@ const RevenueManagement = () => {
               formatter={(value) => formatCurrency(value)}
               labelFormatter={(label) => `Thời gian: ${label}`}
             />
-            <Legend />
-            <Line
-              type="monotone"
-              dataKey="value"
-              name="Doanh thu"
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  name="Doanh thu"
               stroke="#1976d2"
               strokeWidth={2}
               dot={{ fill: '#1976d2' }}
-              activeDot={{ r: 8 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </Paper>
+                  activeDot={{ r: 8 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </Paper>
 
       {/* Revenue by Service and Doctor */}
       <Grid container spacing={3}>

@@ -1,7 +1,8 @@
-import api from './api';
+import axios from 'axios';
+import { API_URL } from '../config';
 
 // Add request interceptor
-api.interceptors.request.use(
+axios.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -18,10 +19,10 @@ const appointmentService = {
   // Get all appointments (admin only)
   getAllAppointments: async () => {
     try {
-      const response = await api.get('/appointments');
+      const response = await axios.get(`${API_URL}/appointments`);
       return response.data;
     } catch (error) {
-      console.error('Error getting appointments:', error);
+      console.error('Error fetching appointments:', error);
       throw error;
     }
   },
@@ -29,10 +30,10 @@ const appointmentService = {
   // Get appointment by ID
   getAppointmentById: async (id) => {
     try {
-      const response = await api.get(`/appointments/${id}`);
+      const response = await axios.get(`${API_URL}/appointments/${id}`);
       return response.data;
     } catch (error) {
-      console.error('Error getting appointment:', error);
+      console.error('Error fetching appointment:', error);
       throw error;
     }
   },
@@ -40,7 +41,7 @@ const appointmentService = {
   // Get appointments for current patient
   getPatientAppointments: async () => {
     try {
-      const response = await api.get('/appointments/patient/me');
+      const response = await axios.get(`${API_URL}/appointments/patient/me`);
       return response.data;
     } catch (error) {
       console.error('Error getting patient appointments:', error);
@@ -51,7 +52,7 @@ const appointmentService = {
   // Get appointments for current doctor
   getDoctorAppointments: async () => {
     try {
-      const response = await api.get('/appointments/doctor/me');
+      const response = await axios.get(`${API_URL}/appointments/doctor/me`);
       return response.data;
     } catch (error) {
       console.error('Error getting doctor appointments:', error);
@@ -62,7 +63,7 @@ const appointmentService = {
   // Create a new appointment
   createAppointment: async (appointmentData) => {
     try {
-      const response = await api.post('/appointments', appointmentData);
+      const response = await axios.post(`${API_URL}/appointments`, appointmentData);
       return response.data;
     } catch (error) {
       console.error('Error creating appointment:', error);
@@ -73,7 +74,7 @@ const appointmentService = {
   // Update an appointment
   updateAppointment: async (id, appointmentData) => {
     try {
-      const response = await api.put(`/appointments/${id}`, appointmentData);
+      const response = await axios.put(`${API_URL}/appointments/${id}`, appointmentData);
       return response.data;
     } catch (error) {
       console.error('Error updating appointment:', error);
@@ -84,7 +85,7 @@ const appointmentService = {
   // Update appointment status
   updateAppointmentStatus: async (id, status) => {
     try {
-      const response = await api.patch(`/appointments/${id}/status`, { status });
+      const response = await axios.patch(`${API_URL}/appointments/${id}/status`, { status });
       return response.data;
     } catch (error) {
       console.error('Error updating appointment status:', error);
@@ -95,7 +96,7 @@ const appointmentService = {
   // Delete an appointment
   deleteAppointment: async (id) => {
     try {
-      const response = await api.delete(`/appointments/${id}`);
+      const response = await axios.delete(`${API_URL}/appointments/${id}`);
       return response.data;
     } catch (error) {
       console.error('Error deleting appointment:', error);

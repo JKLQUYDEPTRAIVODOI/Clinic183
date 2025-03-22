@@ -12,16 +12,10 @@ router.get('/:id', authenticateToken, authorizeAdmin, invoiceController.getInvoi
 // Create new invoice - Admin only
 router.post('/', authenticateToken, authorizeAdmin, invoiceController.createInvoice);
 
-// Update invoice - Admin only
-router.put('/:id', authenticateToken, authorizeAdmin, invoiceController.updateInvoice);
-
-// Update invoice status - Admin only
-router.patch('/:id/status', authenticateToken, authorizeAdmin, invoiceController.updateInvoiceStatus);
+// Update payment status - Admin only
+router.patch('/:id/status', authenticateToken, authorizeAdmin, invoiceController.updateStatus);
 
 // Delete invoice - Admin only
 router.delete('/:id', authenticateToken, authorizeAdmin, invoiceController.deleteInvoice);
-
-// Get invoices by patient ID - Admin and patient
-router.get('/patient/:patientId', authenticateToken, invoiceController.getInvoicesByPatientId);
 
 module.exports = router; 

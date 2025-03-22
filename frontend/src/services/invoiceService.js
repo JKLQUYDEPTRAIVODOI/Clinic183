@@ -23,7 +23,7 @@ const invoiceService = {
     }
   },
 
-  // Create invoice
+  // Create new invoice
   createInvoice: async (invoiceData) => {
     try {
       const response = await api.post('/invoices', invoiceData);

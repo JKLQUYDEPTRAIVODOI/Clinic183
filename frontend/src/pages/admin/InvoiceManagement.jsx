@@ -47,6 +47,7 @@ import invoiceService from '../../services/invoiceService';
 import patientService from '../../services/patientService';
 import serviceService from '../../services/serviceService';
 import medicineService from '../../services/medicineService';
+import appointmentService from '../../services/appointmentService';
 
 const InvoiceManagement = () => {
   const navigate = useNavigate();
@@ -65,11 +66,20 @@ const InvoiceManagement = () => {
   const [medicines, setMedicines] = useState([]);
   const [medicinesLoading, setMedicinesLoading] = useState(false);
   const [formData, setFormData] = useState({
-    patientName: '',
-    patientId: '',
-    invoiceDate: '',
+    appointmentId: '',
+    tax_percent: 10,
+    discount_percent: 0,
+    payment_method: '',
+    paid_amount: 0,
+    notes: '',
     status: 'pending',
-    items: [{ name: '', amount: '', serviceId: null, medicineId: null }],
+    items: [{ 
+      type: '', 
+      id: null, 
+      quantity: 1,
+      discount_amount: 0,
+      unit_price: 0
+    }]
   });
   const [pagination, setPagination] = useState({
     page: 1,
@@ -77,6 +87,7 @@ const InvoiceManagement = () => {
     total: 0,
     pages: 0
   });
+  const [appointments, setAppointments] = useState([]);
 
   useEffect(() => {
     // Kiểm tra quyền
@@ -93,6 +104,7 @@ const InvoiceManagement = () => {
     fetchPatients();
     fetchServices();
     fetchMedicines();
+    fetchAppointments();
   }, []);
 
   const fetchInvoices = async () => {
@@ -152,6 +164,28 @@ const InvoiceManagement = () => {
     }
   };
 
+  const fetchAppointments = async () => {
+    try {
+      const response = await appointmentService.getAllAppointments();
+      // Kiểm tra response có tồn tại và là mảng không
+      if (response && Array.isArray(response)) {
+        // Chỉ lấy các cuộc hẹn đã hoàn thành và chưa có hóa đơn
+        const completedAppointments = response.filter(
+          app => app.status === 'completed' && !app.has_invoice
+        );
+        setAppointments(completedAppointments);
+      } else {
+        console.error('Invalid response format from appointments API');
+        setError('Không thể tải danh sách cuộc hẹn: Dữ liệu không hợp lệ');
+        setAppointments([]);
+      }
+    } catch (error) {
+      console.error('Error fetching appointments:', error);
+      setError(error.response?.data?.message || 'Không thể tải danh sách cuộc hẹn');
+      setAppointments([]);
+    }
+  };
+
   const handleEditOpen = (invoice = null) => {
     if (invoice) {
       setSelectedInvoice(invoice);
@@ -171,19 +205,23 @@ const InvoiceManagement = () => {
         );
         
         return {
-          name: item.name,
-          amount: item.price.toString(),
-          serviceId: matchedService ? matchedService.id : null,
-          medicineId: matchedMedicine ? matchedMedicine.id : null
+          type: item.type || '',
+          id: item.id,
+          quantity: item.quantity || 1,
+          discount_amount: item.discount_amount || 0,
+          unit_price: item.unit_price || 0
         };
       });
       
       setFormData({
-        patientName: invoice.patient_name,
-        patientId: invoice.patient_id.toString(),
-        invoiceDate: invoice.created_at.split('T')[0],
-        status: invoice.payment_status,
-        items: formattedItems.length > 0 ? formattedItems : [{ name: '', amount: '', serviceId: null, medicineId: null }],
+        appointmentId: invoice.appointment_id.toString(),
+        tax_percent: invoice.tax_percent || 10,
+        discount_percent: invoice.discount_percent || 0,
+        payment_method: invoice.payment_method || '',
+        paid_amount: invoice.paid_amount || 0,
+        notes: invoice.notes || '',
+        status: invoice.payment_status || 'pending',
+        items: formattedItems.length > 0 ? formattedItems : [{ type: '', id: null, quantity: 1, discount_amount: 0, unit_price: 0 }],
       });
 
       // Find patient in list
@@ -193,11 +231,14 @@ const InvoiceManagement = () => {
       setSelectedInvoice(null);
       setSelectedPatient(null);
       setFormData({
-        patientName: '',
-        patientId: '',
-        invoiceDate: new Date().toISOString().split('T')[0],
+        appointmentId: '',
+        tax_percent: 10,
+        discount_percent: 0,
+        payment_method: '',
+        paid_amount: 0,
+        notes: '',
         status: 'pending',
-        items: [{ name: 'Khám bệnh', amount: '', serviceId: null, medicineId: null }],
+        items: [{ type: '', id: null, quantity: 1, discount_amount: 0, unit_price: 0 }],
       });
     }
     setOpen(true);
@@ -228,14 +269,18 @@ const InvoiceManagement = () => {
     if (newValue) {
       setFormData({
         ...formData,
-        patientName: newValue.name,
+        appointmentId: newValue.appointment_id.toString(),
         patientId: newValue.id.toString(),
+        patientName: newValue.patient_name,
+        items: [{ type: '', id: null, quantity: 1, discount_amount: 0, unit_price: 0 }]
       });
     } else {
       setFormData({
         ...formData,
-        patientName: '',
+        appointmentId: '',
         patientId: '',
+        patientName: '',
+        items: [{ type: '', id: null, quantity: 1, discount_amount: 0, unit_price: 0 }]
       });
     }
   };
@@ -249,20 +294,25 @@ const InvoiceManagement = () => {
     });
   };
 
-  const handleServiceChange = (index, newValue) => {
+  const handleServiceChange = async (index, newValue) => {
     const updatedItems = [...formData.items];
     if (newValue) {
       updatedItems[index] = {
-        name: newValue.name,
-        amount: newValue.price.toString(),
-        serviceId: newValue.id
+        type: 'service',
+        id: newValue.id,
+        quantity: 1,
+        unit_price: newValue.price || 0,
+        discount_amount: 0,
+        name: newValue.name
       };
     } else {
-      // Giữ nguyên tên nếu đã có, chỉ xóa giá và ID
       updatedItems[index] = {
-        ...updatedItems[index],
-        amount: '',
-        serviceId: null
+        type: '',
+        id: null,
+        quantity: 1,
+        unit_price: 0,
+        discount_amount: 0,
+        name: ''
       };
     }
     setFormData({
@@ -275,17 +325,21 @@ const InvoiceManagement = () => {
     const updatedItems = [...formData.items];
     if (newValue) {
       updatedItems[index] = {
-        name: newValue.name,
-        amount: newValue.price.toString(),
-        serviceId: null,
-        medicineId: newValue.id
+        type: 'medicine',
+        id: newValue.id,
+        quantity: 1,
+        unit_price: newValue.price || 0,
+        discount_amount: 0,
+        name: newValue.name
       };
     } else {
-      // Giữ nguyên tên nếu đã có, chỉ xóa giá và ID
       updatedItems[index] = {
-        ...updatedItems[index],
-        amount: '',
-        medicineId: null
+        type: '',
+        id: null,
+        quantity: 1,
+        unit_price: 0,
+        discount_amount: 0,
+        name: ''
       };
     }
     setFormData({
@@ -297,7 +351,7 @@ const InvoiceManagement = () => {
   const addItem = () => {
     setFormData({
       ...formData,
-      items: [...formData.items, { name: '', amount: '', serviceId: null, medicineId: null }],
+      items: [...formData.items, { type: '', id: null, quantity: 1, discount_amount: 0, unit_price: 0 }],
     });
   };
 
@@ -312,54 +366,75 @@ const InvoiceManagement = () => {
     }
   };
 
-  const calculateTotal = () => {
+  const calculateSubtotal = () => {
     return formData.items.reduce((total, item) => {
-      const amount = item.amount ? parseInt(item.amount) : 0;
-      return total + amount;
+      const itemSubtotal = (item.quantity * item.unit_price) - item.discount_amount;
+      return total + itemSubtotal;
     }, 0);
+  };
+
+  const calculateTotal = () => {
+    const subtotal = calculateSubtotal();
+    const taxAmount = subtotal * (formData.tax_percent / 100);
+    const discountAmount = subtotal * (formData.discount_percent / 100);
+    return subtotal + taxAmount - discountAmount;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Validate form data
-    if (!formData.patientId || !formData.patientName || !formData.invoiceDate || 
-        formData.items.some(item => !item.name || !item.amount)) {
-      alert('Vui lòng điền đầy đủ thông tin cần thiết');
+    if (!formData.appointmentId) {
+      setError('Vui lòng chọn cuộc hẹn');
       return;
     }
-    
-    // Prepare data for API
-    const invoiceData = {
-      patientId: parseInt(formData.patientId),
-      patientName: formData.patientName,
-      totalAmount: calculateTotal(),
-      paymentStatus: formData.status,
-      items: formData.items.map(item => ({
-        name: item.name,
-        amount: parseInt(item.amount) || 0,
-        serviceId: item.serviceId ? parseInt(item.serviceId) : null,
-        medicineId: item.medicineId ? parseInt(item.medicineId) : null
-      }))
-    };
-    
+
+    // Validate items
+    const invalidItems = formData.items.filter(item => {
+      return !item.id;
+    });
+
+    if (invalidItems.length > 0) {
+      setError('Vui lòng chọn dịch vụ hoặc thuốc cho tất cả các mục');
+      return;
+    }
+
     try {
       setLoading(true);
-      
+      setError(null);
+
+      const invoiceData = {
+        appointment_id: parseInt(formData.appointmentId),
+        tax_percent: parseInt(formData.tax_percent),
+        discount_percent: parseInt(formData.discount_percent),
+        payment_method: formData.payment_method,
+        paid_amount: parseInt(formData.paid_amount),
+        notes: formData.notes,
+        items: formData.items.map(item => ({
+          type: item.type,
+          id: item.id,
+          quantity: item.quantity,
+          discount_amount: item.discount_amount || 0
+        })),
+      };
+
+      console.log('Sending invoice data:', invoiceData); // Debug log
+
       if (selectedInvoice) {
-        // Update existing invoice
         await invoiceService.updateInvoice(selectedInvoice.id, invoiceData);
       } else {
-        // Create new invoice
         await invoiceService.createInvoice(invoiceData);
       }
-      
-      // Refresh invoices list
+
       fetchInvoices();
       handleClose();
     } catch (error) {
       console.error('Error saving invoice:', error);
-      setError('Lỗi khi lưu hóa đơn. Vui lòng thử lại sau.');
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message ||
+                          'Lỗi khi lưu hóa đơn. Vui lòng thử lại sau.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -434,6 +509,36 @@ const InvoiceManagement = () => {
   // Tìm medicine object từ medicineId
   const findMedicineById = (medicineId) => {
     return medicines.find(medicine => medicine.id === medicineId) || null;
+  };
+
+  const handleAppointmentChange = (event) => {
+    const appointmentId = event.target.value;
+    const appointment = appointments.find(app => app.id === appointmentId);
+    
+    if (appointment) {
+      setFormData(prev => ({
+        ...prev,
+        appointmentId: appointmentId.toString(),
+        patientId: appointment.patient_id.toString(),
+        patientName: appointment.patient_name,
+        items: [{ type: '', id: null, quantity: 1, discount_amount: 0, unit_price: 0 }]
+      }));
+      
+      // Find and set selected patient
+      const patient = patients.find(p => p.id === appointment.patient_id);
+      setSelectedPatient(patient || null);
+    }
+  };
+
+  // Thêm hàm để lấy giá dịch vụ hiện tại
+  const fetchServicePrice = async (serviceId) => {
+    try {
+      const response = await serviceService.getServicePrice(serviceId);
+      return response.price;
+    } catch (error) {
+      console.error('Error fetching service price:', error);
+      return 0;
+    }
   };
 
   return (
@@ -617,6 +722,94 @@ const InvoiceManagement = () => {
                 </FormControl>
               </Grid>
               
+              {!selectedInvoice && (
+                <Grid item xs={12}>
+                  <FormControl fullWidth sx={{ mb: 2 }}>
+                    <InputLabel>Chọn cuộc hẹn</InputLabel>
+                    <Select
+                      value={formData.appointmentId}
+                      onChange={handleAppointmentChange}
+                      required
+                    >
+                      {appointments.map((appointment) => (
+                        <MenuItem key={appointment.id} value={appointment.id}>
+                          {`${appointment.patient_name} - ${new Date(appointment.appointment_date).toLocaleDateString()}`}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+              )}
+              
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Phần trăm thuế (%)"
+                  type="number"
+                  name="tax_percent"
+                  value={formData.tax_percent}
+                  onChange={handleInputChange}
+                  InputProps={{
+                    inputProps: { min: 0, max: 100 }
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Phần trăm giảm giá (%)"
+                  type="number"
+                  name="discount_percent"
+                  value={formData.discount_percent}
+                  onChange={handleInputChange}
+                  InputProps={{
+                    inputProps: { min: 0, max: 100 }
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Phương thức thanh toán"
+                  name="payment_method"
+                  value={formData.payment_method}
+                  onChange={handleInputChange}
+                  select
+                >
+                  <MenuItem value="cash">Tiền mặt</MenuItem>
+                  <MenuItem value="transfer">Chuyển khoản</MenuItem>
+                  <MenuItem value="card">Thẻ</MenuItem>
+                </TextField>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Số tiền đã trả"
+                  type="number"
+                  name="paid_amount"
+                  value={formData.paid_amount}
+                  onChange={handleInputChange}
+                  InputProps={{
+                    inputProps: { min: 0 }
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Ghi chú"
+                  name="notes"
+                  value={formData.notes}
+                  onChange={handleInputChange}
+                  multiline
+                  rows={3}
+                />
+              </Grid>
+
               <Grid item xs={12}>
                 <Box display="flex" justifyContent="space-between" alignItems="center" mt={2} mb={1}>
                   <Typography variant="h6">Chi tiết các mục</Typography>
@@ -635,83 +828,123 @@ const InvoiceManagement = () => {
                     <CardContent>
                       <Grid container spacing={2} alignItems="center">
                         <Grid item xs={12} md={4}>
-                          <Autocomplete
-                            options={services}
-                            loading={servicesLoading}
-                            getOptionLabel={(option) => `${option.name} - ${formatCurrency(option.price)}`}
-                            value={item.serviceId ? findServiceById(item.serviceId) : null}
-                            onChange={(event, newValue) => handleServiceChange(index, newValue)}
-                            isOptionEqualToValue={(option, value) => option.id === value.id}
-                            renderInput={(params) => (
-                              <TextField
-                                {...params}
-                                fullWidth
-                                label="Chọn dịch vụ"
-                                InputProps={{
-                                  ...params.InputProps,
-                                  endAdornment: (
-                                    <>
-                                      {servicesLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                                      {params.InputProps.endAdornment}
-                                    </>
-                                  ),
-                                }}
-                              />
-                            )}
-                          />
+                          <FormControl fullWidth>
+                            <InputLabel>Loại</InputLabel>
+                            <Select
+                              value={item.type || ''}
+                              onChange={(e) => {
+                                const updatedItems = [...formData.items];
+                                updatedItems[index] = {
+                                  type: e.target.value,
+                                  id: null,
+                                  quantity: 1,
+                                  unit_price: 0,
+                                  discount_amount: 0,
+                                  name: ''
+                                };
+                                setFormData({
+                                  ...formData,
+                                  items: updatedItems,
+                                });
+                              }}
+                            >
+                              <MenuItem value="">Chọn loại</MenuItem>
+                              <MenuItem value="service">Dịch vụ</MenuItem>
+                              <MenuItem value="medicine">Thuốc</MenuItem>
+                            </Select>
+                          </FormControl>
                         </Grid>
+
                         <Grid item xs={12} md={4}>
-                          <Autocomplete
-                            options={medicines}
-                            loading={medicinesLoading}
-                            getOptionLabel={(option) => `${option.name} - ${formatCurrency(option.price)}`}
-                            value={item.medicineId ? findMedicineById(item.medicineId) : null}
-                            onChange={(event, newValue) => handleMedicineChange(index, newValue)}
-                            isOptionEqualToValue={(option, value) => option.id === value.id}
-                            renderInput={(params) => (
-                              <TextField
-                                {...params}
-                                fullWidth
-                                label="Chọn thuốc"
-                                InputProps={{
-                                  ...params.InputProps,
-                                  endAdornment: (
-                                    <>
-                                      {medicinesLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                                      {params.InputProps.endAdornment}
-                                    </>
-                                  ),
-                                }}
-                              />
-                            )}
-                          />
-                        </Grid>
-                        {!item.serviceId && !item.medicineId && (
-                          <Grid item xs={12} md={8}>
-                            <TextField
-                              fullWidth
-                              label="Tên dịch vụ/sản phẩm"
-                              value={item.name}
-                              onChange={(e) => handleItemChange(index, 'name', e.target.value)}
-                              required
-                              margin="normal"
+                          {item.type === 'service' && (
+                            <Autocomplete
+                              options={services}
+                              loading={servicesLoading}
+                              getOptionLabel={(option) => `${option.name} - ${formatCurrency(option.price)}`}
+                              value={item.id ? findServiceById(item.id) : null}
+                              onChange={(event, newValue) => handleServiceChange(index, newValue)}
+                              isOptionEqualToValue={(option, value) => option.id === value.id}
+                              renderInput={(params) => (
+                                <TextField
+                                  {...params}
+                                  fullWidth
+                                  label="Chọn dịch vụ"
+                                  InputProps={{
+                                    ...params.InputProps,
+                                    endAdornment: (
+                                      <>
+                                        {servicesLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                                        {params.InputProps.endAdornment}
+                                      </>
+                                    ),
+                                  }}
+                                />
+                              )}
                             />
-                          </Grid>
-                        )}
-                        <Grid item xs={12} md={3}>
+                          )}
+                          {item.type === 'medicine' && (
+                            <Autocomplete
+                              options={medicines}
+                              loading={medicinesLoading}
+                              getOptionLabel={(option) => `${option.name} - ${formatCurrency(option.price)}`}
+                              value={item.id ? findMedicineById(item.id) : null}
+                              onChange={(event, newValue) => handleMedicineChange(index, newValue)}
+                              isOptionEqualToValue={(option, value) => option.id === value.id}
+                              renderInput={(params) => (
+                                <TextField
+                                  {...params}
+                                  fullWidth
+                                  label="Chọn thuốc"
+                                  InputProps={{
+                                    ...params.InputProps,
+                                    endAdornment: (
+                                      <>
+                                        {medicinesLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                                        {params.InputProps.endAdornment}
+                                      </>
+                                    ),
+                                  }}
+                                />
+                              )}
+                            />
+                          )}
+                        </Grid>
+
+                        <Grid item xs={12} md={2}>
                           <TextField
                             fullWidth
-                            label="Số tiền (VNĐ)"
+                            label="Số lượng"
                             type="number"
-                            value={item.amount}
-                            onChange={(e) => handleItemChange(index, 'amount', e.target.value)}
-                            required
-                            disabled={item.serviceId !== null || item.medicineId !== null}
+                            value={item.quantity}
+                            onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value))}
+                            InputProps={{
+                              inputProps: { min: 1 }
+                            }}
+                          />
+                        </Grid>
+
+                        <Grid item xs={12} md={2}>
+                          <TextField
+                            fullWidth
+                            label="Giảm giá"
+                            type="number"
+                            value={item.discount_amount}
+                            onChange={(e) => handleItemChange(index, 'discount_amount', parseFloat(e.target.value))}
                             InputProps={{
                               inputProps: { min: 0 }
                             }}
                           />
                         </Grid>
+
+                        <Grid item xs={12} md={2}>
+                          <Typography>
+                            Đơn giá: {formatCurrency(item.unit_price)}
+                          </Typography>
+                          <Typography>
+                            Thành tiền: {formatCurrency((item.quantity * item.unit_price) - item.discount_amount)}
+                          </Typography>
+                        </Grid>
+
                         <Grid item xs={12} md={1}>
                           <IconButton 
                             color="error" 
@@ -730,6 +963,37 @@ const InvoiceManagement = () => {
                 <Box display="flex" justifyContent="flex-end" mt={2}>
                   <Typography variant="h6">
                     Tổng cộng: {formatCurrency(calculateTotal())}
+                  </Typography>
+                </Box>
+              </Grid>
+
+              <Grid item xs={12}>
+                <Box display="flex" justifyContent="space-between" mt={2}>
+                  <Typography variant="subtitle1">
+                    Tổng tiền hàng: {formatCurrency(calculateSubtotal())}
+                  </Typography>
+                </Box>
+                <Box display="flex" justifyContent="space-between">
+                  <Typography variant="subtitle1">
+                    Thuế ({formData.tax_percent}%): {formatCurrency(calculateSubtotal() * formData.tax_percent / 100)}
+                  </Typography>
+                </Box>
+                <Box display="flex" justifyContent="space-between">
+                  <Typography variant="subtitle1">
+                    Giảm giá ({formData.discount_percent}%): {formatCurrency(calculateSubtotal() * formData.discount_percent / 100)}
+                  </Typography>
+                </Box>
+                <Box display="flex" justifyContent="space-between">
+                  <Typography variant="h6">
+                    Tổng cộng: {formatCurrency(calculateTotal())}
+                  </Typography>
+                </Box>
+                <Box display="flex" justifyContent="space-between">
+                  <Typography variant="subtitle1" color={formData.paid_amount >= calculateTotal() ? 'success.main' : 'error.main'}>
+                    {formData.paid_amount >= calculateTotal() ? 'Đã thanh toán đủ' : 'Chưa thanh toán đủ'}
+                  </Typography>
+                  <Typography variant="subtitle1">
+                    Còn lại: {formatCurrency(calculateTotal() - formData.paid_amount)}
                   </Typography>
                 </Box>
               </Grid>
@@ -763,6 +1027,13 @@ const InvoiceManagement = () => {
                   <Typography variant="subtitle1">
                     Ngày tạo: {new Date(selectedInvoice.created_at).toLocaleDateString('vi-VN')}
                   </Typography>
+                  <Typography variant="subtitle1">
+                    Phương thức thanh toán: {
+                      selectedInvoice.payment_method === 'cash' ? 'Tiền mặt' :
+                      selectedInvoice.payment_method === 'transfer' ? 'Chuyển khoản' :
+                      selectedInvoice.payment_method === 'card' ? 'Thẻ' : 'Không xác định'
+                    }
+                  </Typography>
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <Typography variant="subtitle1">
@@ -777,6 +1048,11 @@ const InvoiceManagement = () => {
                       sx={{ ml: 1 }}
                     />
                   </Typography>
+                  {selectedInvoice.payment_status === 'paid' && (
+                    <Typography variant="subtitle1">
+                      Ngày thanh toán: {new Date(selectedInvoice.payment_date).toLocaleDateString('vi-VN')}
+                    </Typography>
+                  )}
                 </Grid>
               </Grid>
 
@@ -784,33 +1060,62 @@ const InvoiceManagement = () => {
                 Chi tiết các mục
               </Typography>
 
-              <List>
-                {selectedInvoice.items.map((item, index) => (
-                  <React.Fragment key={index}>
-                    <ListItem>
-                      <ListItemText
-                        primary={item.name}
-                        secondary={formatCurrency(item.price)}
-                      />
-                    </ListItem>
-                    {index < selectedInvoice.items.length - 1 && <Divider />}
-                  </React.Fragment>
-                ))}
-              </List>
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Tên</TableCell>
+                      <TableCell align="right">Số lượng</TableCell>
+                      <TableCell align="right">Đơn giá</TableCell>
+                      <TableCell align="right">Giảm giá</TableCell>
+                      <TableCell align="right">Thành tiền</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {selectedInvoice.items.map((item, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{item.name}</TableCell>
+                        <TableCell align="right">{item.quantity}</TableCell>
+                        <TableCell align="right">{formatCurrency(item.unit_price_at_time)}</TableCell>
+                        <TableCell align="right">{formatCurrency(item.discount_amount)}</TableCell>
+                        <TableCell align="right">{formatCurrency(item.subtotal)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
 
-              <Divider sx={{ my: 2 }} />
-
-              <Box display="flex" justifyContent="space-between" alignItems="center">
-                <Typography variant="h6">Tổng cộng:</Typography>
-                <Typography variant="h6">
-                  {formatCurrency(selectedInvoice.total_amount)}
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="subtitle1" sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Tổng tiền hàng:</span>
+                  <span>{formatCurrency(selectedInvoice.subtotal)}</span>
+                </Typography>
+                <Typography variant="subtitle1" sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Thuế ({selectedInvoice.tax_percent}%):</span>
+                  <span>{formatCurrency(selectedInvoice.tax_amount)}</span>
+                </Typography>
+                <Typography variant="subtitle1" sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Giảm giá ({selectedInvoice.discount_percent}%):</span>
+                  <span>{formatCurrency(selectedInvoice.discount_amount)}</span>
+                </Typography>
+                <Typography variant="h6" sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
+                  <span>Tổng cộng:</span>
+                  <span>{formatCurrency(selectedInvoice.total_amount)}</span>
+                </Typography>
+                <Typography variant="subtitle1" sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Đã trả:</span>
+                  <span>{formatCurrency(selectedInvoice.paid_amount)}</span>
+                </Typography>
+                <Typography variant="subtitle1" sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Còn lại:</span>
+                  <span>{formatCurrency(selectedInvoice.total_amount - selectedInvoice.paid_amount)}</span>
                 </Typography>
               </Box>
 
-              {selectedInvoice.payment_status === 'paid' && selectedInvoice.payment_date && (
+              {selectedInvoice.notes && (
                 <Box sx={{ mt: 2 }}>
                   <Typography variant="subtitle1">
-                    Ngày thanh toán: {new Date(selectedInvoice.payment_date).toLocaleDateString('vi-VN')}
+                    Ghi chú: {selectedInvoice.notes}
                   </Typography>
                 </Box>
               )}

@@ -55,6 +55,10 @@ exports.createService = async (req, res) => {
     if (!name || !price) {
       return res.status(400).json({ message: 'Name and price are required' });
     }
+
+    if (isNaN(parseFloat(price)) || parseFloat(price) < 0) {
+      return res.status(400).json({ message: 'Price must be a positive number' });
+    }
     
     const serviceId = await Service.create({
       name,
@@ -79,6 +83,10 @@ exports.updateService = async (req, res) => {
     // Validate input
     if (!name || !price) {
       return res.status(400).json({ message: 'Name and price are required' });
+    }
+
+    if (isNaN(parseFloat(price)) || parseFloat(price) < 0) {
+      return res.status(400).json({ message: 'Price must be a positive number' });
     }
     
     const serviceExists = await Service.getById(serviceId);
@@ -115,5 +123,50 @@ exports.deleteService = async (req, res) => {
   } catch (error) {
     console.error('Error deleting service:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Lấy lịch sử giá của dịch vụ
+exports.getServicePriceHistory = async (req, res) => {
+  try {
+    const serviceId = req.params.id;
+    
+    const serviceExists = await Service.getById(serviceId);
+    if (!serviceExists) {
+      return res.status(404).json({ message: 'Service not found' });
+    }
+    
+    const priceHistory = await Service.getPriceHistory(serviceId);
+    res.json(priceHistory);
+  } catch (error) {
+    console.error('Error getting service price history:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Get current price of a service
+exports.getServicePrice = async (req, res) => {
+  try {
+    const serviceId = req.params.id;
+    const service = await Service.getById(serviceId);
+
+    if (!service) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy dịch vụ'
+      });
+    }
+
+    res.json({
+      success: true,
+      price: service.price
+    });
+  } catch (error) {
+    console.error('Error in getServicePrice:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi khi lấy giá dịch vụ',
+      error: error.message
+    });
   }
 }; 
