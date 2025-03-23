@@ -38,6 +38,7 @@ import PatientRecords from './pages/doctor/PatientRecords';
 import DoctorPrescriptions from './pages/doctor/Prescriptions';
 import Schedule from './pages/doctor/Schedule';
 import DoctorPatientProfile from './pages/doctor/PatientProfile';
+import AppointmentDetails from './pages/doctor/AppointmentDetails';
 
 // Patient Pages
 import PatientDashboard from './pages/patient/Dashboard';
@@ -45,7 +46,7 @@ import PatientProfile from './pages/patient/Profile';
 import PatientAppointments from './pages/patient/Appointments';
 import MedicalHistory from './pages/patient/MedicalHistory';
 import PatientPrescriptions from './pages/patient/Prescriptions';
-import Bills from './pages/patient/Bills';
+import Invoices from './pages/patient/Invoices';
 
 // Protected Route Component
 const ProtectedRoute = ({ allowedRoles }) => {
@@ -167,6 +168,7 @@ function App() {
           <Route index element={<DoctorDashboard />} />
           <Route path="profile" element={<DoctorProfile />} />
           <Route path="appointments" element={<DoctorAppointmentsNew />} />
+          <Route path="appointments/:id" element={<AppointmentDetails />} />
           <Route path="patients" element={<PatientRecords />} />
           <Route path="prescriptions" element={<DoctorPrescriptions />} />
           <Route path="schedule" element={<Schedule />} />
@@ -183,7 +185,7 @@ function App() {
           <Route path="appointments/new" element={<PatientAppointments />} />
           <Route path="medical-history" element={<MedicalHistory />} />
           <Route path="prescriptions" element={<PatientPrescriptions />} />
-          <Route path="bills" element={<Bills />} />
+          <Route path="invoices" element={<Invoices />} />
         </Route>
       </Route>
 

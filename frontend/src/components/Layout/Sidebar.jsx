@@ -61,7 +61,7 @@ const Sidebar = () => {
     { text: 'Lịch hẹn', icon: <EventNoteIcon />, path: '/patient/appointments' },
     { text: 'Lịch sử khám bệnh', icon: <AssignmentIcon />, path: '/patient/medical-history' },
     { text: 'Đơn thuốc', icon: <ReceiptIcon />, path: '/patient/prescriptions' },
-    { text: 'Hóa đơn', icon: <ReceiptIcon />, path: '/patient/bills' },
+    { text: 'Hóa đơn', icon: <ReceiptIcon />, path: '/patient/invoices' },
   ];
 
   const getMenuItems = () => {

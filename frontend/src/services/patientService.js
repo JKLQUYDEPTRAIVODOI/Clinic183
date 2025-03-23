@@ -23,6 +23,28 @@ const patientService = {
     }
   },
 
+  // Get current patient's profile
+  getMyProfile: async () => {
+    try {
+      const response = await api.get('/patients/me');
+      return response.data;
+    } catch (error) {
+      console.error('Error getting profile:', error);
+      throw error;
+    }
+  },
+
+  // Update current patient's profile
+  updateMyProfile: async (profileData) => {
+    try {
+      const response = await api.put('/patients/me', profileData);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      throw error;
+    }
+  },
+
   // Update patient
   updatePatient: async (id, patientData) => {
     try {

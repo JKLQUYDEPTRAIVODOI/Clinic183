@@ -1,4 +1,5 @@
 const Invoice = require('../models/invoiceModel');
+const Patient = require('../models/patientModel');
 
 const invoiceController = {
   // Lấy danh sách hóa đơn
@@ -150,6 +151,28 @@ const invoiceController = {
         success: false,
         message: 'Lỗi khi cập nhật trạng thái hóa đơn',
         error: error.message
+      });
+    }
+  },
+
+  // Lấy hóa đơn của bệnh nhân hiện tại
+  getMyInvoices: async (req, res) => {
+    try {
+      const userId = req.user.id;
+      
+      // Lấy patient_id từ user_id
+      const patient = await Patient.getByUserId(userId);
+      if (!patient) {
+        return res.status(404).json({ message: 'Không tìm thấy thông tin bệnh nhân' });
+      }
+
+      const invoices = await Invoice.getByPatientId(patient.id);
+      res.json(invoices);
+    } catch (error) {
+      console.error('Error in getMyInvoices:', error);
+      res.status(500).json({ 
+        message: 'Lỗi khi lấy danh sách hóa đơn',
+        error: error.message 
       });
     }
   }

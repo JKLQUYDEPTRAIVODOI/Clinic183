@@ -48,17 +48,61 @@ class MedicalRecord {
   // Get medical records by patient ID
   static async getByPatientId(patientId) {
     try {
+      // Get medical records with basic info
       const [records] = await db.query(`
         SELECT mr.*, 
                a.appointment_date, a.appointment_time,
-               u2.name as doctor_name, d.id as doctor_id
+               u2.name as doctor_name, d.id as doctor_id,
+               d.specialization as doctor_specialization
         FROM medical_records mr
         JOIN appointments a ON mr.appointment_id = a.id
         JOIN doctors d ON a.doctor_id = d.id
         JOIN users u2 ON d.user_id = u2.id
         WHERE a.patient_id = ?
-        ORDER BY mr.created_at DESC
+        ORDER BY a.appointment_date DESC, a.appointment_time DESC
       `, [patientId]);
+
+      // Get prescriptions for each medical record
+      for (let record of records) {
+        // Get prescription
+        const [prescriptions] = await db.query(`
+          SELECT p.*, 
+                 pi.medicine_id,
+                 m.name as medicine_name,
+                 pi.dosage,
+                 pi.frequency,
+                 pi.duration,
+                 pi.instructions
+          FROM prescriptions p
+          JOIN prescription_items pi ON p.id = pi.prescription_id
+          JOIN medicines m ON pi.medicine_id = m.id
+          WHERE p.medical_record_id = ?
+        `, [record.id]);
+
+        if (prescriptions.length > 0) {
+          record.prescription = {
+            id: prescriptions[0].id,
+            medicines: prescriptions.map(item => ({
+              name: item.medicine_name,
+              dosage: item.dosage,
+              frequency: item.frequency,
+              duration: item.duration,
+              instructions: item.instructions
+            }))
+          };
+        }
+
+        // Get tests (if you have a tests table)
+        // const [tests] = await db.query(`
+        //   SELECT t.*
+        //   FROM tests t
+        //   WHERE t.medical_record_id = ?
+        // `, [record.id]);
+        // if (tests.length > 0) {
+        //   record.tests = tests;
+        // }
+      }
+
       return records;
     } catch (error) {
       throw error;

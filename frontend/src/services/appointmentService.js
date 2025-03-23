@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { API_URL } from '../config';
+import api from './api';
 
 // Add request interceptor
 axios.interceptors.request.use(
@@ -30,10 +31,10 @@ const appointmentService = {
   // Get appointment by ID
   getAppointmentById: async (id) => {
     try {
-      const response = await axios.get(`${API_URL}/appointments/${id}`);
+      const response = await api.get(`/appointments/${id}`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching appointment:', error);
+      console.error('Error fetching appointment details:', error);
       throw error;
     }
   },
@@ -52,10 +53,10 @@ const appointmentService = {
   // Get appointments for current doctor
   getDoctorAppointments: async () => {
     try {
-      const response = await axios.get(`${API_URL}/appointments/doctor/me`);
+      const response = await api.get('/appointments/doctor/me');
       return response.data;
     } catch (error) {
-      console.error('Error getting doctor appointments:', error);
+      console.error('Error fetching doctor appointments:', error);
       throw error;
     }
   },
@@ -72,9 +73,9 @@ const appointmentService = {
   },
 
   // Update an appointment
-  updateAppointment: async (id, appointmentData) => {
+  updateAppointment: async (id, data) => {
     try {
-      const response = await axios.put(`${API_URL}/appointments/${id}`, appointmentData);
+      const response = await api.put(`/appointments/${id}`, data);
       return response.data;
     } catch (error) {
       console.error('Error updating appointment:', error);
@@ -85,7 +86,7 @@ const appointmentService = {
   // Update appointment status
   updateAppointmentStatus: async (id, status) => {
     try {
-      const response = await axios.patch(`${API_URL}/appointments/${id}/status`, { status });
+      const response = await api.patch(`/appointments/${id}/status`, { status });
       return response.data;
     } catch (error) {
       console.error('Error updating appointment status:', error);

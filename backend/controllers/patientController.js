@@ -1,5 +1,57 @@
 const Patient = require('../models/patientModel');
 
+// Get current patient's profile
+exports.getMyProfile = async (req, res) => {
+  try {
+    const patient = await Patient.getByUserId(req.user.id);
+    if (!patient) {
+      return res.status(404).json({ message: 'Patient not found' });
+    }
+    res.json(patient);
+  } catch (error) {
+    console.error('Error getting profile:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Update current patient's profile
+exports.updateMyProfile = async (req, res) => {
+  try {
+    const { date_of_birth, gender, blood_group, address, phone, medical_history, allergies, current_medications } = req.body;
+    
+    // Check if patient exists
+    const patient = await Patient.getByUserId(req.user.id);
+    if (!patient) {
+      return res.status(404).json({ message: 'Patient not found' });
+    }
+    
+    const updated = await Patient.update(patient.id, {
+      date_of_birth,
+      gender,
+      blood_group,
+      address,
+      phone,
+      medical_history,
+      allergies,
+      current_medications
+    });
+    
+    if (!updated) {
+      return res.status(400).json({ message: 'Failed to update profile' });
+    }
+    
+    const updatedPatient = await Patient.getByUserId(req.user.id);
+    
+    res.json({
+      message: 'Profile updated successfully',
+      patient: updatedPatient
+    });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // Get all patients
 exports.getAllPatients = async (req, res) => {
   try {

@@ -1,10 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const invoiceController = require('../controllers/invoiceController');
-const { authenticateToken, authorizeAdmin } = require('../middleware/auth');
+const { authenticateToken, authorizeAdmin, authorizePatient } = require('../middleware/auth');
 
 // Get all invoices - Admin only
 router.get('/', authenticateToken, authorizeAdmin, invoiceController.getAllInvoices);
+
+// Route để lấy hóa đơn của bệnh nhân hiện tại
+router.get('/me', authenticateToken, authorizePatient, invoiceController.getMyInvoices);
 
 // Get invoice by ID - Admin only
 router.get('/:id', authenticateToken, authorizeAdmin, invoiceController.getInvoiceById);

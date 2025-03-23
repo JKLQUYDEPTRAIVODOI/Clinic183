@@ -562,24 +562,52 @@ class Invoice {
   // Get invoices by patient ID
   static async getByPatientId(patientId) {
     try {
-      // Get invoices
-      const [invoices] = await db.execute(
-        `SELECT * FROM invoices WHERE patient_id = ? ORDER BY created_at DESC`,
-        [patientId]
-      );
-      
+      // Get invoices with details
+      const [invoices] = await db.execute(`
+        SELECT 
+          i.*,
+          a.appointment_date,
+          a.appointment_time,
+          p.id as patient_id,
+          u.name as patient_name,
+          d.id as doctor_id,
+          du.name as doctor_name,
+          d.specialization as doctor_specialization
+        FROM invoices i
+        JOIN appointments a ON i.appointment_id = a.id
+        JOIN patients p ON a.patient_id = p.id
+        JOIN users u ON p.user_id = u.id
+        JOIN doctors d ON a.doctor_id = d.id
+        JOIN users du ON d.user_id = du.id
+        WHERE p.id = ?
+        ORDER BY i.created_at DESC
+      `, [patientId]);
+
       // Get items for each invoice
-      for (const invoice of invoices) {
-        const [items] = await db.execute(
-          'SELECT * FROM invoice_items WHERE invoice_id = ?',
-          [invoice.id]
-        );
+      for (let invoice of invoices) {
+        const [items] = await db.execute(`
+          SELECT 
+            ii.*,
+            CASE 
+              WHEN ii.item_type = 'service' THEN s.name
+              WHEN ii.item_type = 'medicine' THEN m.name
+            END as name,
+            CASE 
+              WHEN ii.item_type = 'service' THEN s.description
+              WHEN ii.item_type = 'medicine' THEN m.description
+            END as description
+          FROM invoice_items ii
+          LEFT JOIN services s ON ii.item_type = 'service' AND ii.item_id = s.id
+          LEFT JOIN medicines m ON ii.item_type = 'medicine' AND ii.item_id = m.id
+          WHERE ii.invoice_id = ?
+        `, [invoice.id]);
+
         invoice.items = items;
       }
-      
+
       return invoices;
     } catch (error) {
-      console.error('Error getting patient invoices:', error);
+      console.error('Error in getByPatientId:', error);
       throw error;
     }
   }

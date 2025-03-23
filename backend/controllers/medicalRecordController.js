@@ -1,4 +1,5 @@
 const MedicalRecord = require('../models/medicalRecordModel');
+const Patient = require('../models/patientModel');
 const { checkRole } = require('../middleware/auth');
 
 const medicalRecordController = {
@@ -30,7 +31,14 @@ const medicalRecordController = {
   // Get medical records for current patient
   getPatientMedicalRecords: async (req, res) => {
     try {
-      const records = await MedicalRecord.getByPatientId(req.user.id);
+      // Get patient by user ID first
+      const patient = await Patient.getByUserId(req.user.id);
+      if (!patient) {
+        return res.status(404).json({ message: 'Patient not found' });
+      }
+
+      // Then get medical records by patient ID
+      const records = await MedicalRecord.getByPatientId(patient.id);
       res.json(records);
     } catch (error) {
       console.error('Error in getPatientMedicalRecords:', error);

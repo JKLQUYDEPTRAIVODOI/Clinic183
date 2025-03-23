@@ -140,7 +140,7 @@ const Dashboard = () => {
     {
       title: 'Thanh toán',
       icon: <ReceiptIcon fontSize="large" />,
-      path: '/patient/bills',
+      path: '/patient/invoices',
       color: 'warning.main',
     },
   ];

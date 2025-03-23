@@ -76,6 +76,17 @@ const invoiceService = {
       console.error('Error getting patient invoices:', error);
       throw error;
     }
+  },
+
+  // Get current patient's invoices
+  getMyInvoices: async () => {
+    try {
+      const response = await api.get('/invoices/me');
+      return response.data;
+    } catch (error) {
+      console.error('Error getting my invoices:', error);
+      throw error;
+    }
   }
 };
 

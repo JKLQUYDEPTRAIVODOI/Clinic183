@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -15,16 +15,19 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Button
+  Button,
+  CircularProgress
 } from '@mui/material';
 import { Edit as EditIcon, Save as SaveIcon, Cancel as CancelIcon } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import patientService from '../../services/patientService';
 
-const DoctorPatientProfile = () => {
+const PatientProfile = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [patient, setPatient] = useState({
     id: '',
     name: '',
@@ -48,6 +51,7 @@ const DoctorPatientProfile = () => {
 
   const fetchPatientProfile = async () => {
     try {
+      setLoading(true);
       const data = await patientService.getPatientById(id);
       setPatient(data);
       setEditedPatient(data);
@@ -58,6 +62,8 @@ const DoctorPatientProfile = () => {
         message: 'Không thể tải thông tin bệnh nhân',
         severity: 'error'
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -73,6 +79,7 @@ const DoctorPatientProfile = () => {
 
   const handleSave = async () => {
     try {
+      setLoading(true);
       await patientService.updatePatient(id, {
         date_of_birth: editedPatient.date_of_birth,
         gender: editedPatient.gender,
@@ -97,6 +104,8 @@ const DoctorPatientProfile = () => {
         message: 'Không thể cập nhật thông tin',
         severity: 'error'
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -111,36 +120,81 @@ const DoctorPatientProfile = () => {
     setAlert({ ...alert, open: false });
   };
 
+  if (loading) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+          <CircularProgress />
+        </Box>
+      </Container>
+    );
+  }
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Paper sx={{ p: 4 }}>
-        <Grid container spacing={4}>
-          {/* Header */}
-          <Grid item xs={12}>
-            <Box display="flex" justifyContent="space-between" alignItems="center">
-              <Typography variant="h4" component="h1">
-                Hồ sơ bệnh nhân
-              </Typography>
-              {!isEditing ? (
-                <IconButton color="primary" onClick={handleEdit}>
-                  <EditIcon />
-                </IconButton>
-              ) : (
-                <Box>
-                  <IconButton color="primary" onClick={handleSave}>
-                    <SaveIcon />
-                  </IconButton>
-                  <IconButton color="error" onClick={handleCancel}>
-                    <CancelIcon />
-                  </IconButton>
-                </Box>
-              )}
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+          Hồ sơ bệnh nhân
+        </Typography>
+        <Box>
+          {!isEditing ? (
+            <Button
+              variant="contained"
+              startIcon={<EditIcon />}
+              onClick={handleEdit}
+              sx={{ 
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 'medium'
+              }}
+            >
+              Chỉnh sửa
+            </Button>
+          ) : (
+            <Box display="flex" gap={1}>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<SaveIcon />}
+                onClick={handleSave}
+                sx={{ 
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontWeight: 'medium'
+                }}
+              >
+                Lưu
+              </Button>
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<CancelIcon />}
+                onClick={handleCancel}
+                sx={{ 
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontWeight: 'medium'
+                }}
+              >
+                Hủy
+              </Button>
             </Box>
-          </Grid>
+          )}
+        </Box>
+      </Box>
 
+      <Paper 
+        elevation={3} 
+        sx={{ 
+          p: 3, 
+          borderRadius: 2,
+          background: 'linear-gradient(to right, #ffffff, #f8f9fa)'
+        }}
+      >
+        <Grid container spacing={4}>
           {/* Basic Information */}
           <Grid item xs={12}>
-            <Typography variant="h6" gutterBottom>
+            <Typography variant="h6" gutterBottom sx={{ color: 'primary.main', fontWeight: 'bold' }}>
               Thông tin cơ bản
             </Typography>
             <Grid container spacing={3}>
@@ -150,6 +204,7 @@ const DoctorPatientProfile = () => {
                   label="Họ và tên"
                   value={patient.name}
                   disabled={true}
+                  sx={{ bgcolor: 'background.paper' }}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -158,6 +213,7 @@ const DoctorPatientProfile = () => {
                   label="Email"
                   value={patient.email}
                   disabled={true}
+                  sx={{ bgcolor: 'background.paper' }}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -169,10 +225,11 @@ const DoctorPatientProfile = () => {
                   onChange={handleChange('date_of_birth')}
                   disabled={!isEditing}
                   InputLabelProps={{ shrink: true }}
+                  sx={{ bgcolor: 'background.paper' }}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
+                <FormControl fullWidth sx={{ bgcolor: 'background.paper' }}>
                   <InputLabel>Giới tính</InputLabel>
                   <Select
                     value={isEditing ? editedPatient.gender : patient.gender}
@@ -193,6 +250,7 @@ const DoctorPatientProfile = () => {
                   value={isEditing ? editedPatient.blood_group : patient.blood_group}
                   onChange={handleChange('blood_group')}
                   disabled={!isEditing}
+                  sx={{ bgcolor: 'background.paper' }}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -202,6 +260,7 @@ const DoctorPatientProfile = () => {
                   value={isEditing ? editedPatient.phone : patient.phone}
                   onChange={handleChange('phone')}
                   disabled={!isEditing}
+                  sx={{ bgcolor: 'background.paper' }}
                 />
               </Grid>
               <Grid item xs={12}>
@@ -213,18 +272,19 @@ const DoctorPatientProfile = () => {
                   disabled={!isEditing}
                   multiline
                   rows={2}
+                  sx={{ bgcolor: 'background.paper' }}
                 />
               </Grid>
             </Grid>
           </Grid>
 
           <Grid item xs={12}>
-            <Divider />
+            <Divider sx={{ my: 2 }} />
           </Grid>
 
           {/* Medical Information */}
           <Grid item xs={12}>
-            <Typography variant="h6" gutterBottom>
+            <Typography variant="h6" gutterBottom sx={{ color: 'primary.main', fontWeight: 'bold' }}>
               Thông tin y tế
             </Typography>
             <Grid container spacing={3}>
@@ -237,6 +297,7 @@ const DoctorPatientProfile = () => {
                   disabled={!isEditing}
                   multiline
                   rows={4}
+                  sx={{ bgcolor: 'background.paper' }}
                 />
               </Grid>
               <Grid item xs={12}>
@@ -248,6 +309,7 @@ const DoctorPatientProfile = () => {
                   disabled={!isEditing}
                   multiline
                   rows={2}
+                  sx={{ bgcolor: 'background.paper' }}
                 />
               </Grid>
               <Grid item xs={12}>
@@ -259,6 +321,7 @@ const DoctorPatientProfile = () => {
                   disabled={!isEditing}
                   multiline
                   rows={3}
+                  sx={{ bgcolor: 'background.paper' }}
                 />
               </Grid>
             </Grid>
@@ -272,7 +335,14 @@ const DoctorPatientProfile = () => {
         onClose={handleCloseAlert}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        <Alert onClose={handleCloseAlert} severity={alert.severity}>
+        <Alert 
+          onClose={handleCloseAlert} 
+          severity={alert.severity}
+          sx={{ 
+            borderRadius: 2,
+            width: '100%'
+          }}
+        >
           {alert.message}
         </Alert>
       </Snackbar>
@@ -280,4 +350,4 @@ const DoctorPatientProfile = () => {
   );
 };
 
-export default DoctorPatientProfile; 
+export default PatientProfile; 
