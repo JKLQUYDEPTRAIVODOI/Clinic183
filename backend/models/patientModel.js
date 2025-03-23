@@ -1,15 +1,15 @@
 const db = require('../config/db');
 
 class Patient {
-  // Lấy tất cả bệnh nhân
+  // Get all patients
   static async getAll() {
+    const query = `
+      SELECT p.*, u.name, u.email, u.created_at
+      FROM patients p
+      LEFT JOIN users u ON p.user_id = u.id
+    `;
     try {
-      const [patients] = await db.execute(
-        `SELECT p.id, p.user_id, u.name, p.date_of_birth, p.gender, p.phone 
-         FROM patients p 
-         JOIN users u ON p.user_id = u.id 
-         ORDER BY u.name ASC`
-      );
+      const [patients] = await db.query(query);
       return patients;
     } catch (error) {
       console.error('Error getting patients:', error);
@@ -17,19 +17,65 @@ class Patient {
     }
   }
 
-  // Lấy bệnh nhân theo ID
+  // Get patient by ID
   static async getById(id) {
+    const query = `
+      SELECT p.*, u.name, u.email, u.created_at
+      FROM patients p
+      LEFT JOIN users u ON p.user_id = u.id
+      WHERE p.id = ?
+    `;
     try {
-      const [patients] = await db.execute(
-        `SELECT p.*, u.name, u.email 
-         FROM patients p 
-         JOIN users u ON p.user_id = u.id 
-         WHERE p.id = ?`,
-        [id]
-      );
-      return patients.length > 0 ? patients[0] : null;
+      const [patients] = await db.query(query, [id]);
+      return patients[0];
     } catch (error) {
-      console.error('Error getting patient by id:', error);
+      console.error('Error getting patient:', error);
+      throw error;
+    }
+  }
+
+  // Update patient
+  static async update(id, patientData) {
+    const {
+      date_of_birth,
+      gender,
+      blood_group,
+      address,
+      phone,
+      medical_history,
+      allergies,
+      current_medications
+    } = patientData;
+
+    const query = `
+      UPDATE patients 
+      SET 
+        date_of_birth = ?,
+        gender = ?,
+        blood_group = ?,
+        address = ?,
+        phone = ?,
+        medical_history = ?,
+        allergies = ?,
+        current_medications = ?
+      WHERE id = ?
+    `;
+
+    try {
+      const [result] = await db.query(query, [
+        date_of_birth,
+        gender,
+        blood_group,
+        address,
+        phone,
+        medical_history,
+        allergies,
+        current_medications,
+        id
+      ]);
+      return result.affectedRows > 0;
+    } catch (error) {
+      console.error('Error updating patient:', error);
       throw error;
     }
   }

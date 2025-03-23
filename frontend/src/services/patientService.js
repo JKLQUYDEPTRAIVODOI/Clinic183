@@ -23,6 +23,28 @@ const patientService = {
     }
   },
 
+  // Update patient
+  updatePatient: async (id, patientData) => {
+    try {
+      const response = await api.put(`/patients/${id}`, patientData);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating patient:', error);
+      throw error;
+    }
+  },
+
+  // Get patient's medical history
+  getPatientMedicalHistory: async (id) => {
+    try {
+      const response = await api.get(`/patients/${id}/medical-history`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting patient medical history:', error);
+      throw error;
+    }
+  },
+
   // Get current patient's appointments
   getMyAppointments: async () => {
     try {

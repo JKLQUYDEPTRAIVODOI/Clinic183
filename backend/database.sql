@@ -31,6 +31,9 @@ CREATE TABLE IF NOT EXISTS patients (
   blood_group VARCHAR(5),
   address TEXT,
   phone VARCHAR(20),
+  medical_history TEXT,
+  allergies TEXT,
+  current_medications TEXT,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -275,4 +278,35 @@ INSERT INTO invoice_items (invoice_id, item_type, item_id, quantity, unit_price_
 (3, 'service', 5, 1, 200000),
 (3, 'medicine', 4, 10, 15000),
 (4, 'service', 6, 1, 200000),
-(4, 'medicine', 1, 10, 15000); 
+(4, 'medicine', 1, 10, 15000);
+
+-- Update sample data for patients with new columns
+UPDATE patients SET
+  medical_history = 'Tiền sử cao huyết áp, đã điều trị ổn định từ 2020',
+  allergies = 'Dị ứng với penicillin',
+  current_medications = 'Đang sử dụng thuốc huyết áp Amlodipine 5mg mỗi ngày'
+WHERE id = 1;
+
+UPDATE patients SET
+  medical_history = 'Tiền sử viêm phổi năm 2021, đã điều trị khỏi hoàn toàn',
+  allergies = 'Không có dị ứng',
+  current_medications = 'Không có'
+WHERE id = 2;
+
+UPDATE patients SET
+  medical_history = 'Tiền sử đau dạ dày mãn tính',
+  allergies = 'Dị ứng với hải sản',
+  current_medications = 'Đang sử dụng thuốc dạ dày Omeprazole 20mg'
+WHERE id = 3;
+
+UPDATE patients SET
+  medical_history = 'Tiền sử tiểu đường type 2 từ 2019',
+  allergies = 'Dị ứng với aspirin',
+  current_medications = 'Metformin 500mg, 2 lần/ngày'
+WHERE id = 4;
+
+UPDATE patients SET
+  medical_history = 'Không có tiền sử bệnh đặc biệt',
+  allergies = 'Dị ứng với bụi nhà',
+  current_medications = 'Đang sử dụng thuốc kháng histamine Cetirizine 10mg khi cần'
+WHERE id = 5; 

@@ -6,6 +6,12 @@ const { authenticateToken, authorizeAdmin, authorizeDoctor } = require('../middl
 // Get all doctors (public)
 router.get('/', doctorController.getAllDoctors);
 
+// Get current doctor's profile
+router.get('/me', authenticateToken, authorizeDoctor, doctorController.getCurrentDoctorProfile);
+
+// Update current doctor's profile
+router.put('/me', authenticateToken, authorizeDoctor, doctorController.updateCurrentDoctorProfile);
+
 // Get doctor by ID (public)
 router.get('/:id', doctorController.getDoctorById);
 

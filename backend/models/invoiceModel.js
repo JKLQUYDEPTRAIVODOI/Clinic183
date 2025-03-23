@@ -333,7 +333,7 @@ class Invoice {
     const connection = await db.getConnection();
     try {
       await connection.beginTransaction();
-
+      
       const { 
         tax_percent,
         tax_amount,
@@ -452,7 +452,7 @@ class Invoice {
       // Calculate new tax and discount amounts
       const newTaxAmount = tax_percent ? subtotal * (tax_percent / 100) : tax_amount;
       const newDiscountAmount = discount_percent ? subtotal * (discount_percent / 100) : discount_amount;
-
+      
       // Update invoice
       await connection.query(
         `UPDATE invoices SET
@@ -462,12 +462,12 @@ class Invoice {
           discount_percent = ?,
           discount_amount = ?,
           payment_method = ?,
-          payment_status = ?,
+             payment_status = ?,
           paid_amount = ?,
           payment_date = ?,
           notes = ?,
           updated_at = NOW()
-        WHERE id = ?`,
+         WHERE id = ?`,
         [
           subtotal,
           tax_percent || currentInvoice[0].tax_percent,
@@ -482,7 +482,7 @@ class Invoice {
           id
         ]
       );
-
+      
       await connection.commit();
       return await Invoice.getById(id);
     } catch (error) {

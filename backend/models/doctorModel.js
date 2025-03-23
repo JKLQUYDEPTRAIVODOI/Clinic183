@@ -4,7 +4,7 @@ class Doctor {
   // Get all doctors
   static async getAll() {
     const query = `
-      SELECT d.*, u.name, u.email
+      SELECT d.*, u.name, u.email, u.created_at
       FROM doctors d
       LEFT JOIN users u ON d.user_id = u.id
     `;
@@ -20,7 +20,7 @@ class Doctor {
   // Get doctor by ID
   static async getById(id) {
     const query = `
-      SELECT d.*, u.name, u.email
+      SELECT d.*, u.name, u.email, u.created_at
       FROM doctors d
       LEFT JOIN users u ON d.user_id = u.id
       WHERE d.id = ?
@@ -34,12 +34,29 @@ class Doctor {
     }
   }
 
+  // Get doctor by user ID
+  static async getByUserId(userId) {
+    const query = `
+      SELECT d.*, u.name, u.email, u.created_at
+      FROM doctors d
+      LEFT JOIN users u ON d.user_id = u.id
+      WHERE d.user_id = ?
+    `;
+    try {
+      const [doctors] = await db.query(query, [userId]);
+      return doctors[0];
+    } catch (error) {
+      console.error('Error getting doctor by user ID:', error);
+      throw error;
+    }
+  }
+
   // Create new doctor
   static async create(doctorData) {
-    const { user_id, specialization, experience } = doctorData;
-    const query = 'INSERT INTO doctors (user_id, specialization, experience) VALUES (?, ?, ?)';
+    const { user_id, specialization, experience_years, bio } = doctorData;
+    const query = 'INSERT INTO doctors (user_id, specialization, experience_years, bio) VALUES (?, ?, ?, ?)';
     try {
-      const [result] = await db.query(query, [user_id, specialization, experience]);
+      const [result] = await db.query(query, [user_id, specialization, experience_years || null, bio || null]);
       return result.insertId;
     } catch (error) {
       console.error('Error creating doctor:', error);
@@ -49,10 +66,10 @@ class Doctor {
 
   // Update doctor
   static async update(id, doctorData) {
-    const { specialization, experience } = doctorData;
-    const query = 'UPDATE doctors SET specialization = ?, experience = ? WHERE id = ?';
+    const { specialization, experience_years, bio } = doctorData;
+    const query = 'UPDATE doctors SET specialization = ?, experience_years = ?, bio = ? WHERE id = ?';
     try {
-      const [result] = await db.query(query, [specialization, experience, id]);
+      const [result] = await db.query(query, [specialization, experience_years || null, bio || null, id]);
       return result.affectedRows > 0;
     } catch (error) {
       console.error('Error updating doctor:', error);
@@ -68,18 +85,6 @@ class Doctor {
       return result.affectedRows > 0;
     } catch (error) {
       console.error('Error deleting doctor:', error);
-      throw error;
-    }
-  }
-
-  // Get doctor by user ID
-  static async getByUserId(userId) {
-    const query = 'SELECT * FROM doctors WHERE user_id = ?';
-    try {
-      const [doctors] = await db.query(query, [userId]);
-      return doctors[0];
-    } catch (error) {
-      console.error('Error getting doctor by user ID:', error);
       throw error;
     }
   }

@@ -1,6 +1,6 @@
 const Patient = require('../models/patientModel');
 
-// Lấy tất cả bệnh nhân
+// Get all patients
 exports.getAllPatients = async (req, res) => {
   try {
     const patients = await Patient.getAll();
@@ -11,19 +11,55 @@ exports.getAllPatients = async (req, res) => {
   }
 };
 
-// Lấy bệnh nhân theo ID
+// Get patient by ID
 exports.getPatientById = async (req, res) => {
   try {
-    const patientId = req.params.id;
-    const patient = await Patient.getById(patientId);
+    const patient = await Patient.getById(req.params.id);
+    if (!patient) {
+      return res.status(404).json({ message: 'Patient not found' });
+    }
+    res.json(patient);
+  } catch (error) {
+    console.error('Error getting patient:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Update patient
+exports.updatePatient = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { date_of_birth, gender, blood_group, address, phone, medical_history, allergies, current_medications } = req.body;
     
+    // Check if patient exists
+    const patient = await Patient.getById(id);
     if (!patient) {
       return res.status(404).json({ message: 'Patient not found' });
     }
     
-    res.json(patient);
+    const updated = await Patient.update(id, {
+      date_of_birth,
+      gender,
+      blood_group,
+      address,
+      phone,
+      medical_history,
+      allergies,
+      current_medications
+    });
+    
+    if (!updated) {
+      return res.status(400).json({ message: 'Failed to update patient' });
+    }
+    
+    const updatedPatient = await Patient.getById(id);
+    
+    res.json({
+      message: 'Patient updated successfully',
+      patient: updatedPatient
+    });
   } catch (error) {
-    console.error('Error getting patient:', error);
+    console.error('Error updating patient:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
