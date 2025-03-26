@@ -19,7 +19,6 @@ import PatientManagement from './pages/admin/PatientManagement';
 import AppointmentManagement from './pages/admin/AppointmentManagement';
 import MedicalServicesManagement from './pages/admin/MedicalServicesManagement';
 import MedicineManagement from './pages/admin/MedicineManagement';
-import ReportsAndStatistics from './pages/admin/ReportsAndStatistics';
 import AdminProfile from './pages/admin/Profile';
 import StaffManagement from './pages/admin/StaffManagement';
 import Settings from './pages/admin/Settings';
@@ -39,6 +38,7 @@ import DoctorPrescriptions from './pages/doctor/Prescriptions';
 import Schedule from './pages/doctor/Schedule';
 import DoctorPatientProfile from './pages/doctor/PatientProfile';
 import AppointmentDetails from './pages/doctor/AppointmentDetails';
+import MedicalRecordDetail from './pages/doctor/MedicalRecordDetail';
 
 // Patient Pages
 import PatientDashboard from './pages/patient/Dashboard';
@@ -151,7 +151,6 @@ function App() {
           <Route path="appointments" element={<AppointmentManagement />} />
           <Route path="services" element={<ServiceManagement />} />
           <Route path="medicines" element={<MedicineManagement />} />
-          <Route path="reports" element={<ReportsAndStatistics />} />
           <Route path="staff" element={<StaffManagement />} />
           <Route path="settings" element={<Settings />} />
           <Route path="diagnoses" element={<DiagnosisManagement />} />
@@ -173,6 +172,7 @@ function App() {
           <Route path="prescriptions" element={<DoctorPrescriptions />} />
           <Route path="schedule" element={<Schedule />} />
           <Route path="patients/:id" element={<DoctorPatientProfile />} />
+          <Route path="medical-records/:id" element={<MedicalRecordDetail />} />
         </Route>
       </Route>
 

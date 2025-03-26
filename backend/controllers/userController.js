@@ -1,4 +1,5 @@
 const User = require('../models/userModel');
+const Patient = require('../models/patientModel');
 const jwt = require('jsonwebtoken');
 
 // Create a new user (admin only)
@@ -41,6 +42,9 @@ exports.register = async (req, res) => {
     
     // Create user with default role 'patient'
     const userId = await User.create({ name, email, password, role: 'patient' });
+    
+    // Create patient record
+    await Patient.create({ user_id: userId });
     
     // Get user without password
     const user = await User.findById(userId);

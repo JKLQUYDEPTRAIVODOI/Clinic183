@@ -43,10 +43,19 @@ class Appointment {
     const query = `
       SELECT a.*, 
         p.id AS patient_id, 
-        u.name AS patient_name
+        u_patient.name AS patient_name,
+        d.id AS doctor_id,
+        u_doctor.name AS doctor_name,
+        d.specialization AS doctor_specialization,
+        mr.id AS medical_record_id,
+        mr.diagnosis,
+        mr.notes
       FROM appointments a
       JOIN patients p ON a.patient_id = p.id
-      JOIN users u ON p.user_id = u.id
+      JOIN users u_patient ON p.user_id = u_patient.id
+      JOIN doctors d ON a.doctor_id = d.id
+      JOIN users u_doctor ON d.user_id = u_doctor.id
+      LEFT JOIN medical_records mr ON mr.appointment_id = a.id
       WHERE a.doctor_id = ?
       ORDER BY a.appointment_date DESC, a.appointment_time DESC
     `;

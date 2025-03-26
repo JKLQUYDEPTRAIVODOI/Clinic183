@@ -88,7 +88,7 @@ const Invoices = () => {
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
-      currency: 'VND'
+      currency: 'VND',
     }).format(amount);
   };
 
@@ -127,12 +127,12 @@ const Invoices = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Paper 
-        elevation={3} 
-        sx={{ 
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+      <Paper
+        elevation={3}
+        sx={{
           p: 3,
-          background: 'linear-gradient(to right bottom, #ffffff, #f8f9fa)'
+          background: 'linear-gradient(to right bottom, #ffffff, #f8f9fa)',
         }}
       >
         <Grid container spacing={3}>
@@ -140,12 +140,12 @@ const Invoices = () => {
           <Grid item xs={12}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
               <ReceiptIcon sx={{ mr: 2, color: '#1a237e', fontSize: 32 }} />
-              <Typography 
-                variant="h4" 
-                component="h1" 
-                sx={{ 
+              <Typography
+                variant="h4"
+                component="h1"
+                sx={{
                   color: '#1a237e',
-                  fontWeight: 600
+                  fontWeight: 600,
                 }}
               >
                 Hóa đơn
@@ -164,15 +164,25 @@ const Invoices = () => {
             {invoices.length === 0 ? (
               <Alert severity="info">Chưa có hóa đơn nào.</Alert>
             ) : (
-              <TableContainer component={Paper} elevation={2}>
-                <Table>
+              <TableContainer
+                component={Paper}
+                elevation={2}
+                sx={{ width: '100%' }} // Ensure the table takes full width
+              >
+                <Table sx={{ minWidth: '100%' }}>
                   <TableHead>
                     <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                      <TableCell>Ngày khám</TableCell>
-                      <TableCell>Bác sĩ</TableCell>
-                      <TableCell align="right">Tổng tiền</TableCell>
-                      <TableCell align="center">Trạng thái</TableCell>
-                      <TableCell align="center">Thao tác</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Ngày khám</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Bác sĩ</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }} align="right">
+                        Tổng tiền
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }} align="center">
+                        Trạng thái
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }} align="center">
+                        Thao tác
+                      </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -199,13 +209,28 @@ const Invoices = () => {
                             color="primary"
                             size="small"
                             onClick={() => handleOpenDialog(invoice)}
-                            sx={{ 
+                            sx={{
                               textTransform: 'none',
-                              borderRadius: 2
+                              borderRadius: 2,
+                              mr: 1,
                             }}
                           >
                             Chi tiết
                           </Button>
+                          {invoice.payment_status === 'pending' && (
+                            <Button
+                              variant="contained"
+                              color="success"
+                              size="small"
+                              onClick={() => handleOpenDialog(invoice)}
+                              sx={{
+                                textTransform: 'none',
+                                borderRadius: 2,
+                              }}
+                            >
+                              Đã thanh toán
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -218,20 +243,24 @@ const Invoices = () => {
       </Paper>
 
       {/* Invoice Detail Dialog */}
-      <Dialog 
-        open={openDialog} 
+      <Dialog
+        open={openDialog}
         onClose={handleCloseDialog}
         maxWidth="md"
         fullWidth
         PaperProps={{
           sx: {
             borderRadius: 2,
-            background: 'linear-gradient(to right bottom, #ffffff, #f8f9fa)'
-          }
+            background: 'linear-gradient(to right bottom, #ffffff, #f8f9fa)',
+          },
         }}
       >
         <DialogTitle sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Typography variant="h6" component="div" sx={{ color: '#1a237e', fontWeight: 600 }}>
+          <Typography
+            variant="h6"
+            component="div"
+            sx={{ color: '#1a237e', fontWeight: 600 }}
+          >
             Chi tiết hóa đơn
           </Typography>
         </DialogTitle>
@@ -242,7 +271,10 @@ const Invoices = () => {
               <Grid container spacing={2}>
                 <Grid item xs={12}>
                   <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
-                    <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#1a237e' }}>
+                    <Typography
+                      variant="subtitle1"
+                      sx={{ mb: 2, fontWeight: 600, color: '#1a237e' }}
+                    >
                       Thông tin chung
                     </Typography>
                     <Grid container spacing={2}>
@@ -270,7 +302,10 @@ const Invoices = () => {
                 {/* Invoice Items */}
                 <Grid item xs={12}>
                   <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
-                    <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#1a237e' }}>
+                    <Typography
+                      variant="subtitle1"
+                      sx={{ mb: 2, fontWeight: 600, color: '#1a237e' }}
+                    >
                       Chi tiết
                     </Typography>
                     <List>
@@ -298,10 +333,14 @@ const Invoices = () => {
                               <Grid item xs={12} sm={6}>
                                 <Box sx={{ textAlign: 'right' }}>
                                   <Typography variant="body2">
-                                    {item.quantity} x {formatCurrency(item.unit_price_at_time)}
+                                    {item.quantity} x{' '}
+                                    {formatCurrency(item.unit_price_at_time)}
                                   </Typography>
                                   <Typography variant="subtitle2" color="primary">
-                                    {formatCurrency(item.quantity * item.unit_price_at_time - (item.discount_amount || 0))}
+                                    {formatCurrency(
+                                      item.quantity * item.unit_price_at_time -
+                                        (item.discount_amount || 0)
+                                    )}
                                   </Typography>
                                 </Box>
                               </Grid>
@@ -317,22 +356,35 @@ const Invoices = () => {
                 {/* Payment Information */}
                 <Grid item xs={12}>
                   <Paper elevation={1} sx={{ p: 2 }}>
-                    <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#1a237e' }}>
+                    <Typography
+                      variant="subtitle1"
+                      sx={{ mb: 2, fontWeight: 600, color: '#1a237e' }}
+                    >
                       Thanh toán
                     </Typography>
                     <Grid container spacing={2}>
                       <Grid item xs={12}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                           <Typography variant="body1">Tạm tính:</Typography>
-                          <Typography variant="body1">{formatCurrency(selectedInvoice.subtotal)}</Typography>
+                          <Typography variant="body1">
+                            {formatCurrency(selectedInvoice.subtotal)}
+                          </Typography>
                         </Box>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                          <Typography variant="body1">Thuế ({selectedInvoice.tax_percent}%):</Typography>
-                          <Typography variant="body1">{formatCurrency(selectedInvoice.tax_amount)}</Typography>
+                          <Typography variant="body1">
+                            Thuế ({selectedInvoice.tax_percent}%):
+                          </Typography>
+                          <Typography variant="body1">
+                            {formatCurrency(selectedInvoice.tax_amount)}
+                          </Typography>
                         </Box>
                         {selectedInvoice.discount_amount > 0 && (
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                            <Typography variant="body1">Giảm giá ({selectedInvoice.discount_percent}%):</Typography>
+                          <Box
+                            sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}
+                          >
+                            <Typography variant="body1">
+                              Giảm giá ({selectedInvoice.discount_percent}%):
+                            </Typography>
                             <Typography variant="body1" color="error">
                               -{formatCurrency(selectedInvoice.discount_amount)}
                             </Typography>
@@ -343,7 +395,10 @@ const Invoices = () => {
                           <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                             Tổng cộng:
                           </Typography>
-                          <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                          <Typography
+                            variant="subtitle1"
+                            sx={{ fontWeight: 600, color: 'primary.main' }}
+                          >
                             {formatCurrency(selectedInvoice.total_amount)}
                           </Typography>
                         </Box>
@@ -351,7 +406,8 @@ const Invoices = () => {
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
                             <PaymentIcon sx={{ mr: 1, color: 'primary.main' }} />
                             <Typography variant="body2" color="text.secondary">
-                              Phương thức thanh toán: {selectedInvoice.payment_method || 'Chưa có'}
+                              Phương thức thanh toán:{' '}
+                              {selectedInvoice.payment_method || 'Chưa có'}
                             </Typography>
                           </Box>
                           <Chip
@@ -369,12 +425,12 @@ const Invoices = () => {
           )}
         </DialogContent>
         <DialogActions sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
-          <Button 
+          <Button
             onClick={handleCloseDialog}
             variant="contained"
-            sx={{ 
+            sx={{
               textTransform: 'none',
-              borderRadius: 2
+              borderRadius: 2,
             }}
           >
             Đóng
@@ -385,4 +441,4 @@ const Invoices = () => {
   );
 };
 
-export default Invoices; 
+export default Invoices;

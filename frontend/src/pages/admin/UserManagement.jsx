@@ -1,16 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import {
   Box,
-  Button,
-  Container,
-  Paper,
   Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   IconButton,
   Dialog,
   DialogTitle,
@@ -21,33 +14,41 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Tabs,
-  Tab,
   Alert,
   CircularProgress,
-  Tooltip,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TablePagination,
 } from '@mui/material';
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   LockReset as LockResetIcon,
   Add as AddIcon,
+  Search as SearchIcon,
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import Button from '../../components/UI/Button';
 import userService from '../../services/userService';
 
 const UserManagement = () => {
   const navigate = useNavigate();
   const { hasRole } = useAuth();
-  const [tabValue, setTabValue] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [users, setUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [totalRows, setTotalRows] = useState(0);
+  const [selectedRole, setSelectedRole] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const [open, setOpen] = useState(false);
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -63,35 +64,61 @@ const UserManagement = () => {
   }, [hasRole, navigate]);
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    const fetchUsers = async () => {
+      try {
+        setLoading(true);
+        // Lấy tất cả users
+        const response = await userService.getAllUsers();
+        
+        // Lọc theo role nếu không phải "all"
+        let filteredUsers = response;
+        if (selectedRole !== 'all') {
+          filteredUsers = response.filter(user => user.role === selectedRole);
+        }
 
-  useEffect(() => {
-    if (tabValue === 0) {
-      setFilteredUsers(users);
-    } else {
-      const roles = ['all', 'admin', 'doctor', 'patient'];
-      setFilteredUsers(users.filter(user => user.role === roles[tabValue]));
-    }
-  }, [tabValue, users]);
+        // Lọc theo search term nếu có
+        if (searchTerm) {
+          const searchLower = searchTerm.toLowerCase();
+          filteredUsers = filteredUsers.filter(user => 
+            user.name?.toLowerCase().includes(searchLower) ||
+            user.email?.toLowerCase().includes(searchLower)
+          );
+        }
 
-  const fetchUsers = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await userService.getAllUsers();
-      setUsers(data);
-      setFilteredUsers(data);
-    } catch (error) {
-      setError('Không thể tải danh sách người dùng');
-      console.error('Error fetching users:', error);
-    } finally {
-      setLoading(false);
-    }
+        // Phân trang
+        const start = page * rowsPerPage;
+        const paginatedUsers = filteredUsers.slice(start, start + rowsPerPage);
+
+        setUsers(paginatedUsers);
+        setTotalRows(filteredUsers.length);
+        setError(null);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        setError('Không thể tải danh sách người dùng');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const debounce = setTimeout(() => {
+      fetchUsers();
+    }, 500);
+
+    return () => clearTimeout(debounce);
+  }, [page, rowsPerPage, selectedRole, searchTerm]);
+
+  const handlePageChange = (event, newPage) => {
+    setPage(newPage);
   };
 
-  const handleTabChange = (event, newValue) => {
-    setTabValue(newValue);
+  const handleRowsPerPageChange = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  const handleRoleChange = (event) => {
+    setSelectedRole(event.target.value);
+    setPage(0);
   };
 
   const handleOpen = (user = null) => {
@@ -167,7 +194,6 @@ const UserManagement = () => {
         });
       }
       
-      await fetchUsers();
       handleClose();
     } catch (error) {
       setError(error.message || 'Có lỗi xảy ra');
@@ -202,7 +228,6 @@ const UserManagement = () => {
         setLoading(true);
         setError(null);
         await userService.deleteUser(id);
-        await fetchUsers();
       } catch (error) {
         setError('Không thể xóa người dùng');
       } finally {
@@ -225,119 +250,131 @@ const UserManagement = () => {
   };
 
   return (
-    <Container maxWidth={false} sx={{ mt: 4, mb: 4 }}>
-      <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column', width: '100%' }}>
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h5" component="h1" gutterBottom>
-            Quản lý người dùng
-          </Typography>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, width: '100%' }}>
-            <Tabs
-              value={tabValue}
-              onChange={handleTabChange}
-              sx={{
-                '& .MuiTabs-indicator': {
-                  backgroundColor: 'primary.main',
-                },
-                '& .MuiTab-root': {
-                  textTransform: 'none',
-                  minWidth: 100,
-                  fontSize: '1rem',
-                  fontWeight: 'normal',
-                  '&.Mui-selected': {
-                    color: 'primary.main',
-                    fontWeight: 'bold',
-                  },
-                },
-              }}
-            >
-              <Tab label="TẤT CẢ" />
-              <Tab label="QUẢN TRỊ VIÊN" />
-              <Tab label="BÁC SĨ" />
-              <Tab label="BỆNH NHÂN" />
-            </Tabs>
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<AddIcon />}
-              onClick={() => handleOpen()}
-              sx={{
-                textTransform: 'none',
-                fontWeight: 'bold',
-                borderRadius: 1,
-              }}
-            >
-              THÊM NGƯỜI DÙNG
-            </Button>
-          </Box>
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+        <Typography variant="h4" component="h1" sx={{ fontWeight: 600 }}>
+          Quản lý người dùng
+        </Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<AddIcon />}
+          onClick={() => handleOpen()}
+        >
+          Thêm người dùng
+        </Button>
+      </Box>
+
+      <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
+        <TextField
+          sx={{ flex: 1 }}
+          placeholder="Tìm kiếm theo tên hoặc email"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />,
+          }}
+        />
+        <FormControl sx={{ width: 200 }}>
+          <InputLabel>Vai trò</InputLabel>
+          <Select
+            value={selectedRole}
+            onChange={handleRoleChange}
+            label="Vai trò"
+          >
+            <MenuItem value="all">Tất cả</MenuItem>
+            <MenuItem value="admin">Quản trị viên</MenuItem>
+            <MenuItem value="doctor">Bác sĩ</MenuItem>
+            <MenuItem value="patient">Bệnh nhân</MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
+
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+          <CircularProgress />
         </Box>
-
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-            <CircularProgress />
-          </Box>
-        ) : (
-          <TableContainer sx={{ width: '100%', overflowX: 'auto' }}>
-            <Table sx={{ minWidth: '100%' }}>
+      ) : (
+        <Paper sx={{ width: '170%' }}>
+          <TableContainer>
+            <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold', fontSize: '1rem', width: { xs: '20%', sm: '25%' } }}>
-                    Tên
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', fontSize: '1rem', width: { xs: '30%', sm: '35%' } }}>
-                    Email
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', fontSize: '1rem', width: { xs: '20%', sm: '20%' } }}>
-                    Vai trò
-                  </TableCell>
-                  <TableCell
-                    align="right"
-                    sx={{ fontWeight: 'bold', fontSize: '1rem', width: { xs: '30%', sm: '20%' } }}
-                  >
-                    Thao tác
-                  </TableCell>
+                  <TableCell width="30%" sx={{ fontWeight: 600, backgroundColor: 'grey.50' }}>Tên</TableCell>
+                  <TableCell width="45%" sx={{ fontWeight: 600, backgroundColor: 'grey.50' }}>Email</TableCell>
+                  <TableCell width="30%" sx={{ fontWeight: 600, backgroundColor: 'grey.50' }}>Vai trò</TableCell>
+                  <TableCell width="30%" align="right" sx={{ fontWeight: 600, backgroundColor: 'grey.50' }}>Thao tác</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredUsers.map((user) => (
-                  <TableRow key={user.id} hover>
-                    <TableCell sx={{ width: { xs: '20%', sm: '25%' } }}>{user.name}</TableCell>
-                    <TableCell sx={{ width: { xs: '30%', sm: '35%' } }}>{user.email}</TableCell>
-                    <TableCell sx={{ width: { xs: '20%', sm: '20%' } }}>{getRoleText(user.role)}</TableCell>
-                    <TableCell align="right" sx={{ width: { xs: '30%', sm: '20%' } }}>
-                      <Tooltip title="Chỉnh sửa">
-                        <IconButton onClick={() => handleOpen(user)} color="primary" size="small">
-                          <EditIcon />
+                {users.map((user) => (
+                  <TableRow
+                    key={user.id}
+                    hover
+                    sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                  >
+                    <TableCell width="30%">{user.name}</TableCell>
+                    <TableCell width="35%">{user.email}</TableCell>
+                    <TableCell width="20%">{getRoleText(user.role)}</TableCell>
+                    <TableCell width="15%" align="right">
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={() => handleOpen(user)}
+                        >
+                          <EditIcon fontSize="small" />
                         </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Đặt lại mật khẩu">
-                        <IconButton onClick={() => handleResetPasswordOpen(user)} color="warning" size="small">
-                          <LockResetIcon />
+                        <IconButton
+                          size="small"
+                          color="warning"
+                          onClick={() => handleResetPasswordOpen(user)}
+                        >
+                          <LockResetIcon fontSize="small" />
                         </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Xóa">
-                        <IconButton onClick={() => handleDelete(user.id)} color="error" size="small">
-                          <DeleteIcon />
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => handleDelete(user.id)}
+                        >
+                          <DeleteIcon fontSize="small" />
                         </IconButton>
-                      </Tooltip>
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </TableContainer>
-        )}
-      </Paper>
+          <TablePagination
+            rowsPerPageOptions={[5, 10, 25]}
+            component="div"
+            count={totalRows}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handlePageChange}
+            onRowsPerPageChange={handleRowsPerPageChange}
+            labelRowsPerPage="Số hàng mỗi trang:"
+            labelDisplayedRows={({ from, to, count }) =>
+              `${from}-${to} của ${count}`
+            }
+          />
+        </Paper>
+      )}
 
       {/* Dialog for Add/Edit User */}
       <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ pb: 1 }}>
+        <DialogTitle>
           {selectedUser ? 'Chỉnh sửa người dùng' : 'Thêm người dùng mới'}
         </DialogTitle>
         <form onSubmit={handleSubmit}>
-          <DialogContent sx={{ pb: 2 }}>
+          <DialogContent>
             {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
             <TextField
               margin="dense"
@@ -401,24 +438,12 @@ const UserManagement = () => {
               </>
             )}
           </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 2 }}>
-            <Button 
-              onClick={handleClose}
-              sx={{ 
-                textTransform: 'none',
-                fontWeight: 'bold',
-              }}
-            >
-              Hủy
-            </Button>
-            <Button 
-              type="submit" 
-              variant="contained" 
+          <DialogActions>
+            <Button onClick={handleClose}>Hủy</Button>
+            <Button
+              type="submit"
+              variant="contained"
               disabled={loading}
-              sx={{ 
-                textTransform: 'none',
-                fontWeight: 'bold',
-              }}
             >
               {loading ? <CircularProgress size={24} /> : 'Lưu'}
             </Button>
@@ -428,9 +453,9 @@ const UserManagement = () => {
 
       {/* Dialog for Reset Password */}
       <Dialog open={resetPasswordOpen} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ pb: 1 }}>Đặt lại mật khẩu</DialogTitle>
+        <DialogTitle>Đặt lại mật khẩu</DialogTitle>
         <form onSubmit={handleResetPassword}>
-          <DialogContent sx={{ pb: 2 }}>
+          <DialogContent>
             {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
             <TextField
               margin="dense"
@@ -454,31 +479,19 @@ const UserManagement = () => {
               required
             />
           </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 2 }}>
-            <Button 
-              onClick={handleClose}
-              sx={{ 
-                textTransform: 'none',
-                fontWeight: 'bold',
-              }}
-            >
-              Hủy
-            </Button>
-            <Button 
-              type="submit" 
-              variant="contained" 
+          <DialogActions>
+            <Button onClick={handleClose}>Hủy</Button>
+            <Button
+              type="submit"
+              variant="contained"
               disabled={loading}
-              sx={{ 
-                textTransform: 'none',
-                fontWeight: 'bold',
-              }}
             >
               {loading ? <CircularProgress size={24} /> : 'Lưu'}
             </Button>
           </DialogActions>
         </form>
       </Dialog>
-    </Container>
+    </Box>
   );
 };
 

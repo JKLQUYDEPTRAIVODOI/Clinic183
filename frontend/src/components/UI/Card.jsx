@@ -1,3 +1,7 @@
+import React from 'react';
+import { Box, Typography } from '@mui/material';
+import theme from '../../theme';
+
 const Card = ({ 
   children, 
   title, 
@@ -7,30 +11,74 @@ const Card = ({
   bodyClassName = '',
   footerClassName = '',
   footer,
+  elevation = 1,
   ...props 
 }) => {
   return (
-    <div 
-      className={`bg-white rounded-lg shadow-md overflow-hidden ${className}`}
+    <Box 
+      className={`bg-white rounded-lg overflow-hidden transition-all duration-200 hover:shadow-lg ${className}`}
+      sx={{
+        boxShadow: theme.shadows[elevation],
+        '&:hover': {
+          boxShadow: theme.shadows[elevation + 2],
+          transform: 'translateY(-2px)',
+        },
+      }}
       {...props}
     >
       {(title || subtitle) && (
-        <div className={`px-6 py-4 border-b ${headerClassName}`}>
-          {title && <h3 className="text-lg font-semibold text-gray-800">{title}</h3>}
-          {subtitle && <p className="mt-1 text-sm text-gray-600">{subtitle}</p>}
-        </div>
+        <Box 
+          className={`px-6 py-4 border-b border-gray-100 ${headerClassName}`}
+          sx={{
+            backgroundColor: 'background.paper',
+          }}
+        >
+          {title && (
+            <Typography 
+              variant="h6" 
+              component="h3"
+              sx={{
+                color: 'text.primary',
+                fontWeight: 600,
+                mb: subtitle ? 0.5 : 0,
+              }}
+            >
+              {title}
+            </Typography>
+          )}
+          {subtitle && (
+            <Typography 
+              variant="body2"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
+              {subtitle}
+            </Typography>
+          )}
+        </Box>
       )}
       
-      <div className={`px-6 py-4 ${bodyClassName}`}>
+      <Box 
+        className={`px-6 py-4 ${bodyClassName}`}
+        sx={{
+          backgroundColor: 'background.paper',
+        }}
+      >
         {children}
-      </div>
+      </Box>
       
       {footer && (
-        <div className={`px-6 py-4 bg-gray-50 border-t ${footerClassName}`}>
+        <Box 
+          className={`px-6 py-4 border-t border-gray-100 ${footerClassName}`}
+          sx={{
+            backgroundColor: 'background.paper',
+          }}
+        >
           {footer}
-        </div>
+        </Box>
       )}
-    </div>
+    </Box>
   );
 };
 

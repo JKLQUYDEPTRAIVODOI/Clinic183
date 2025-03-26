@@ -1,6 +1,21 @@
 const db = require('../config/db');
 
 class Patient {
+  // Create new patient
+  static async create({ user_id }) {
+    const query = `
+      INSERT INTO patients (user_id)
+      VALUES (?)
+    `;
+    try {
+      const [result] = await db.execute(query, [user_id]);
+      return result.insertId;
+    } catch (error) {
+      console.error('Error creating patient:', error);
+      throw error;
+    }
+  }
+
   // Get all patients
   static async getAll() {
     const query = `
