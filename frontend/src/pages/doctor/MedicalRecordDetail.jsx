@@ -92,7 +92,10 @@ const MedicalRecordDetail = () => {
           <Grid item xs={12} sm={6}>
             <Typography>
               <strong>Ngày khám:</strong>{' '}
-              {medicalRecord?.examination_date && format(new Date(medicalRecord.examination_date), 'dd/MM/yyyy', { locale: vi })}
+              {medicalRecord?.appointment_date ? 
+                format(new Date(medicalRecord.appointment_date), 'dd/MM/yyyy', { locale: vi }) :
+                'Không có thông tin'
+              }
             </Typography>
           </Grid>
           <Grid item xs={12}>
