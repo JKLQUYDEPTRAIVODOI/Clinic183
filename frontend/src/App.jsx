@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import Layout from './components/Layout/Layout';
 import Button from './components/UI/Button';
 import NotFound from './pages/NotFound';
+import LandingPage from './pages/LandingPage';
 // Auth Pages
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
@@ -133,7 +134,7 @@ function App() {
   return (
     <Routes>
       {/* Public Routes */}
-      <Route path="/" element={<Layout><HomeDashboard /></Layout>} />
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
