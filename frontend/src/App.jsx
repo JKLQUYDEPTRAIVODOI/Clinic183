@@ -72,7 +72,7 @@ const ProtectedRoute = ({ allowedRoles }) => {
   }
   
   if (allowedRoles && !allowedRoles.includes(user?.role)) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/home" replace />;
   }
   
   return <Outlet />;
@@ -135,6 +135,7 @@ function App() {
     <Routes>
       {/* Public Routes */}
       <Route path="/" element={<LandingPage />} />
+      <Route path="/home" element={<HomeDashboard />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />

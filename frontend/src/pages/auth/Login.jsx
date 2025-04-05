@@ -62,8 +62,10 @@ const Login = () => {
     
     try {
       setIsSubmitting(true);
-      await login(formData.email, formData.password);
-      navigate('/');
+      const response = await login(formData.email, formData.password);
+      
+      // After successful login, navigate to /home where role-based redirect will happen
+      navigate('/home');
     } catch (error) {
       setErrors({
         general: error.response?.data?.message || 'Login failed. Please try again.'
@@ -81,6 +83,15 @@ const Login = () => {
         <div className="w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-6 lg:p-8">
           <div className="w-full max-w-md">
             <div className="text-center">
+              <div className="flex items-center justify-center mb-6">
+                <Button
+                  variant="outline"
+                  className="px-4 py-2"
+                  onClick={() => navigate('/')}
+                >
+                  ← Về trang chủ
+                </Button>
+              </div>
               <h2 className="text-3xl font-extrabold text-gray-900">Sign in to your account</h2>
               <p className="mt-2 text-sm text-gray-600">
                 Or{' '}
