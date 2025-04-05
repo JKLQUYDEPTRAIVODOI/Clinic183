@@ -19,9 +19,14 @@ router.post('/guest/convert', authorize('admin'), appointmentController.convertG
 
 // Doctor routes
 router.get('/doctor/:doctorId', authorize('doctor'), appointmentController.getDoctorAppointments);
+router.get('/doctor/me', authorize('doctor'), appointmentController.getDoctorAppointments);
 
 // Patient routes
 router.get('/patient/:patientId', authorize('patient'), appointmentController.getPatientAppointments);
+router.get('/patient/me', authorize('patient'), appointmentController.getPatientAppointments);
+
+// Create new appointment route
+router.post('/', appointmentController.createAppointment);
 
 // General authenticated routes
 router.route('/:id')
