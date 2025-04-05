@@ -90,7 +90,7 @@ const LandingPage = () => {
                 <Button
                   variant="contained"
                   size="large"
-                  onClick={() => navigate('/register')}
+                  onClick={() => navigate('/book-appointment')}
                   sx={{
                     mr: 2,
                     bgcolor: 'white',
@@ -100,7 +100,39 @@ const LandingPage = () => {
                     },
                   }}
                 >
-                  Đăng Ký Ngay
+                  Đặt Lịch Ngay
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="large"
+                  onClick={() => navigate('/track-appointment')}
+                  sx={{
+                    mr: 2,
+                    borderColor: 'white',
+                    color: 'white',
+                    '&:hover': {
+                      borderColor: 'grey.100',
+                      bgcolor: 'rgba(255, 255, 255, 0.1)',
+                    },
+                  }}
+                >
+                  Tra Cứu Lịch Hẹn
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="large"
+                  onClick={() => navigate('/register')}
+                  sx={{
+                    mr: 2,
+                    borderColor: 'white',
+                    color: 'white',
+                    '&:hover': {
+                      borderColor: 'grey.100',
+                      bgcolor: 'rgba(255, 255, 255, 0.1)',
+                    },
+                  }}
+                >
+                  Đăng Ký
                 </Button>
                 <Button
                   variant="outlined"

@@ -20,7 +20,10 @@ import {
   IconButton,
   MenuItem,
   Alert,
-  CircularProgress
+  CircularProgress,
+  Tabs,
+  Tab,
+  Chip
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
 import appointmentService from '../../services/appointmentService';
@@ -30,32 +33,76 @@ import patientService from '../../services/patientService';
 const AppointmentManagement = () => {
   const [appointments, setAppointments] = useState([]);
   const [doctors, setDoctors] = useState([]);
+  const [doctorsBySpecialization, setDoctorsBySpecialization] = useState([]);
   const [patients, setPatients] = useState([]);
+  const [specializations, setSpecializations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [currentTab, setCurrentTab] = useState(0); // 0 for regular, 1 for guest
   const [formData, setFormData] = useState({
     patient_id: '',
     doctor_id: '',
     appointment_date: '',
     appointment_time: '',
     reason: '',
-    status: 'pending'
+    status: 'pending',
+    // Guest fields
+    guest_name: '',
+    guest_phone: '',
+    guest_email: '',
+    symptoms: '',
+    preferred_date: '',
+    preferred_time: '',
+    department: ''
   });
 
   useEffect(() => {
     fetchAppointments();
     fetchDoctors();
     fetchPatients();
+    fetchSpecializations();
   }, []);
+
+  useEffect(() => {
+    if (formData.department) {
+      fetchDoctorsBySpecialization(formData.department);
+    } else {
+      setDoctorsBySpecialization([]);
+    }
+  }, [formData.department]);
+
+  const formatDateForInput = (dateString) => {
+    if (!dateString) return '';
+    // Convert ISO date string to yyyy-MM-dd format
+    return dateString.split('T')[0];
+  };
+
+  const formatTimeForInput = (timeString) => {
+    if (!timeString) return '';
+    // If it's already in HH:mm format, return as is
+    if (timeString.length === 5) return timeString;
+    // If it's in HH:mm:ss format, remove seconds
+    if (timeString.length === 8) return timeString.substring(0, 5);
+    // If it's an ISO string, extract time part
+    const time = new Date(timeString).toTimeString().substring(0, 5);
+    return time === 'Invalid' ? '' : time;
+  };
 
   const fetchAppointments = async () => {
     try {
       setLoading(true);
       const data = await appointmentService.getAllAppointments();
-      
-      setAppointments(data);
+      // Format dates and times before setting to state
+      const formattedData = data.map(appointment => ({
+        ...appointment,
+        appointment_date: formatDateForInput(appointment.appointment_date),
+        appointment_time: formatTimeForInput(appointment.appointment_time),
+        preferred_date: formatDateForInput(appointment.preferred_date),
+        preferred_time: formatTimeForInput(appointment.preferred_time)
+      }));
+      setAppointments(formattedData);
     } catch (err) {
       setError('Failed to fetch appointments');
       console.error('Error fetching appointments:', err);
@@ -82,26 +129,62 @@ const AppointmentManagement = () => {
     }
   };
 
+  const fetchSpecializations = async () => {
+    try {
+      const response = await appointmentService.getSpecializations();
+      setSpecializations(response.data);
+    } catch (err) {
+      console.error('Error fetching specializations:', err);
+      setError('Failed to fetch specializations');
+    }
+  };
+
+  const fetchDoctorsBySpecialization = async (specialization) => {
+    try {
+      const response = await appointmentService.getDoctorsBySpecialization(specialization);
+      setDoctorsBySpecialization(response.data);
+    } catch (err) {
+      console.error('Error fetching doctors by specialization:', err);
+      setError('Failed to fetch doctors');
+    }
+  };
+
   const handleOpenDialog = (appointment = null) => {
     if (appointment) {
       setSelectedAppointment(appointment);
+      setCurrentTab(appointment.tracking_code ? 1 : 0);
       setFormData({
-        patient_id: appointment.patient_id,
-        doctor_id: appointment.doctor_id,
-        appointment_date: appointment.appointment_date,
-        appointment_time: appointment.appointment_time,
-        reason: appointment.reason,
-        status: appointment.status
+        patient_id: appointment.patient_id || '',
+        doctor_id: appointment.doctor_id || '',
+        appointment_date: formatDateForInput(appointment.appointment_date) || '',
+        appointment_time: formatTimeForInput(appointment.appointment_time) || '',
+        reason: appointment.reason || '',
+        status: appointment.status || 'pending',
+        guest_name: appointment.guest_name || '',
+        guest_phone: appointment.guest_phone || '',
+        guest_email: appointment.guest_email || '',
+        symptoms: appointment.symptoms || '',
+        preferred_date: formatDateForInput(appointment.preferred_date) || '',
+        preferred_time: formatTimeForInput(appointment.preferred_time) || '',
+        department: appointment.department || ''
       });
     } else {
       setSelectedAppointment(null);
+      setCurrentTab(0);
       setFormData({
         patient_id: '',
         doctor_id: '',
         appointment_date: '',
         appointment_time: '',
         reason: '',
-        status: 'pending'
+        status: 'pending',
+        guest_name: '',
+        guest_phone: '',
+        guest_email: '',
+        symptoms: '',
+        preferred_date: '',
+        preferred_time: '',
+        department: ''
       });
     }
     setOpenDialog(true);
@@ -110,13 +193,21 @@ const AppointmentManagement = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setSelectedAppointment(null);
+    setCurrentTab(0);
     setFormData({
       patient_id: '',
       doctor_id: '',
       appointment_date: '',
       appointment_time: '',
       reason: '',
-      status: 'pending'
+      status: 'pending',
+      guest_name: '',
+      guest_phone: '',
+      guest_email: '',
+      symptoms: '',
+      preferred_date: '',
+      preferred_time: '',
+      department: ''
     });
   };
 
@@ -131,13 +222,71 @@ const AppointmentManagement = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const dataToSubmit = {
+        ...formData,
+        // Format dates before sending to API
+        appointment_date: formData.appointment_date ? new Date(formData.appointment_date).toISOString().split('T')[0] : null,
+        appointment_time: formData.appointment_time || null,
+        preferred_date: formData.preferred_date ? new Date(formData.preferred_date).toISOString().split('T')[0] : null,
+        preferred_time: formData.preferred_time || null,
+        // Include other fields that might be needed
+        patient_id: formData.patient_id || null,
+        doctor_id: formData.doctor_id || null,
+        status: formData.status || 'pending',
+        reason: formData.reason || '',
+        guest_name: formData.guest_name || '',
+        guest_phone: formData.guest_phone || '',
+        guest_email: formData.guest_email || '',
+        symptoms: formData.symptoms || '',
+        department: formData.department || ''
+      };
+
+      let updatedAppointment;
       if (selectedAppointment) {
-        await appointmentService.updateAppointment(selectedAppointment.id, formData);
+        // If status is being changed, use updateAppointmentStatus
+        if (selectedAppointment.status !== formData.status) {
+          await appointmentService.updateAppointmentStatus(selectedAppointment.id, formData.status);
+        }
+        updatedAppointment = await appointmentService.updateAppointment(selectedAppointment.id, dataToSubmit);
+        
+        // Update the local state immediately
+        setAppointments(prevAppointments => 
+          prevAppointments.map(apt => 
+            apt.id === selectedAppointment.id 
+              ? {
+                  ...apt,
+                  ...updatedAppointment,
+                  status: formData.status, // Ensure status is updated
+                  appointment_date: formatDateForInput(updatedAppointment.appointment_date),
+                  appointment_time: formatTimeForInput(updatedAppointment.appointment_time),
+                  preferred_date: formatDateForInput(updatedAppointment.preferred_date),
+                  preferred_time: formatTimeForInput(updatedAppointment.preferred_time)
+                }
+              : apt
+          )
+        );
       } else {
-        await appointmentService.createAppointment(formData);
+        if (currentTab === 0) {
+          updatedAppointment = await appointmentService.createAppointment(dataToSubmit);
+        } else {
+          updatedAppointment = await appointmentService.createGuestAppointment(dataToSubmit);
+        }
+        // Add the new appointment to local state
+        setAppointments(prevAppointments => [
+          ...prevAppointments,
+          {
+            ...updatedAppointment,
+            appointment_date: formatDateForInput(updatedAppointment.appointment_date),
+            appointment_time: formatTimeForInput(updatedAppointment.appointment_time),
+            preferred_date: formatDateForInput(updatedAppointment.preferred_date),
+            preferred_time: formatTimeForInput(updatedAppointment.preferred_time)
+          }
+        ]);
       }
+
       handleCloseDialog();
-      fetchAppointments();
+      // Refresh the full list to ensure consistency
+      await fetchAppointments();
     } catch (err) {
       setError('Failed to save appointment');
       console.error('Error saving appointment:', err);
@@ -148,7 +297,11 @@ const AppointmentManagement = () => {
     if (window.confirm('Are you sure you want to delete this appointment?')) {
       try {
         await appointmentService.deleteAppointment(id);
-        fetchAppointments();
+        // Update local state immediately
+        setAppointments(prevAppointments => 
+          prevAppointments.filter(appointment => appointment.id !== id)
+        );
+        setError(null); // Clear any existing errors
       } catch (err) {
         setError('Failed to delete appointment');
         console.error('Error deleting appointment:', err);
@@ -159,10 +312,39 @@ const AppointmentManagement = () => {
   const handleStatusChange = async (id, newStatus) => {
     try {
       await appointmentService.updateAppointmentStatus(id, newStatus);
-      fetchAppointments();
+      // Update local state immediately
+      setAppointments(prevAppointments =>
+        prevAppointments.map(apt =>
+          apt.id === id
+            ? { ...apt, status: newStatus }
+            : apt
+        )
+      );
+      // Refresh appointments to ensure consistency
+      await fetchAppointments();
     } catch (err) {
       setError('Failed to update appointment status');
       console.error('Error updating appointment status:', err);
+    }
+  };
+
+  const handleAssignDoctor = async (appointmentId, doctorId) => {
+    try {
+      await appointmentService.assignDoctorToGuest(appointmentId, doctorId);
+      fetchAppointments();
+    } catch (err) {
+      setError('Failed to assign doctor');
+      console.error('Error assigning doctor:', err);
+    }
+  };
+
+  const handleConvertToRegular = async (appointmentId, patientId) => {
+    try {
+      await appointmentService.convertGuestToRegular(appointmentId, patientId);
+      fetchAppointments();
+    } catch (err) {
+      setError('Failed to convert appointment');
+      console.error('Error converting appointment:', err);
     }
   };
 
@@ -181,183 +363,348 @@ const AppointmentManagement = () => {
     }
   };
 
+  const getPatientName = (appointment) => {
+    if (appointment.guest_name) {
+      return `${appointment.guest_name} (Khách)`;
+    }
+    return patients.find(p => p.id === appointment.patient_id)?.name || 'Unknown';
+  };
+
+  const getDoctorName = (appointment) => {
+    if (appointment.doctor_name) {
+      return appointment.doctor_name;
+    }
+    if (appointment.department) {
+      return `Chờ phân công - ${appointment.department}`;
+    }
+    return 'Chưa phân công';
+  };
+
+  const getAppointmentDate = (appointment) => {
+    if (appointment.tracking_code) {
+      return appointment.preferred_date ? formatDateForInput(appointment.preferred_date) : 'Chưa xác định';
+    }
+    return formatDateForInput(appointment.appointment_date);
+  };
+
+  const getAppointmentTime = (appointment) => {
+    if (appointment.tracking_code) {
+      return appointment.preferred_time ? formatTimeForInput(appointment.preferred_time) : 'Chưa xác định';
+    }
+    return formatTimeForInput(appointment.appointment_time);
+  };
+
+  const renderForm = () => {
+    if (currentTab === 0) {
+      return (
+        <>
+          <TextField
+            select
+            fullWidth
+            margin="normal"
+            name="patient_id"
+            label="Patient"
+            value={formData.patient_id}
+            onChange={handleInputChange}
+            required
+          >
+            {patients.map((patient) => (
+              <MenuItem key={patient.id} value={patient.id}>
+                {patient.name}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            fullWidth
+            margin="normal"
+            name="doctor_id"
+            label="Doctor"
+            value={formData.doctor_id}
+            onChange={handleInputChange}
+            required
+          >
+            {doctors.map((doctor) => (
+              <MenuItem key={doctor.id} value={doctor.id}>
+                {doctor.name} - {doctor.specialization}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            fullWidth
+            margin="normal"
+            name="appointment_date"
+            label="Appointment Date"
+            type="date"
+            value={formData.appointment_date}
+            onChange={handleInputChange}
+            InputLabelProps={{
+              shrink: true,
+            }}
+            required
+          />
+          <TextField
+            fullWidth
+            margin="normal"
+            name="appointment_time"
+            label="Appointment Time"
+            type="time"
+            value={formData.appointment_time}
+            onChange={handleInputChange}
+            InputLabelProps={{
+              shrink: true,
+            }}
+            required
+          />
+          <TextField
+            fullWidth
+            margin="normal"
+            name="reason"
+            label="Reason"
+            multiline
+            rows={3}
+            value={formData.reason}
+            onChange={handleInputChange}
+            required
+          />
+        </>
+      );
+    } else {
+      return (
+        <>
+          <TextField
+            fullWidth
+            margin="normal"
+            name="guest_name"
+            label="Guest Name"
+            value={formData.guest_name}
+            onChange={handleInputChange}
+            required
+          />
+          <TextField
+            fullWidth
+            margin="normal"
+            name="guest_phone"
+            label="Phone Number"
+            value={formData.guest_phone}
+            onChange={handleInputChange}
+            required
+          />
+          <TextField
+            fullWidth
+            margin="normal"
+            name="guest_email"
+            label="Email"
+            type="email"
+            value={formData.guest_email}
+            onChange={handleInputChange}
+          />
+          <TextField
+            fullWidth
+            margin="normal"
+            name="symptoms"
+            label="Symptoms"
+            multiline
+            rows={3}
+            value={formData.symptoms}
+            onChange={handleInputChange}
+            required
+          />
+          <TextField
+            fullWidth
+            margin="normal"
+            name="preferred_date"
+            label="Preferred Date"
+            type="date"
+            value={formData.preferred_date}
+            onChange={handleInputChange}
+            InputLabelProps={{
+              shrink: true,
+            }}
+            required
+          />
+          <TextField
+            fullWidth
+            margin="normal"
+            name="preferred_time"
+            label="Preferred Time"
+            type="time"
+            value={formData.preferred_time}
+            onChange={handleInputChange}
+            InputLabelProps={{
+              shrink: true,
+            }}
+            required
+          />
+          <TextField
+            fullWidth
+            margin="normal"
+            select
+            name="department"
+            label="Department"
+            value={formData.department}
+            onChange={handleInputChange}
+            required
+          >
+            {specializations.map((spec) => (
+              <MenuItem key={spec} value={spec}>
+                {spec}
+              </MenuItem>
+            ))}
+          </TextField>
+          {formData.department && (
+            <TextField
+              fullWidth
+              margin="normal"
+              select
+              name="doctor_id"
+              label="Doctor (Optional)"
+              value={formData.doctor_id}
+              onChange={handleInputChange}
+            >
+              <MenuItem value="">
+                <em>Select a doctor</em>
+              </MenuItem>
+              {doctorsBySpecialization.map((doctor) => (
+                <MenuItem key={doctor.id} value={doctor.id}>
+                  {doctor.name}
+                </MenuItem>
+              ))}
+            </TextField>
+          )}
+        </>
+      );
+    }
+  };
+
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
         <CircularProgress />
       </Box>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Typography variant="h4" component="h1">
-              Quản lý Lịch hẹn
-            </Typography>
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<AddIcon />}
-              onClick={() => handleOpenDialog()}
-            >
-              Thêm Lịch hẹn
-            </Button>
-          </Box>
-        </Grid>
-        <Grid item xs={12}>
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Bác sĩ</TableCell>
-                  <TableCell>Bệnh nhân</TableCell>
-                  <TableCell>Ngày</TableCell>
-                  <TableCell>Giờ</TableCell>
-                  <TableCell>Trạng thái</TableCell>
-                  <TableCell>Ghi chú</TableCell>
-                  <TableCell>Thao tác</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {appointments.map((appointment) => (
-                  <TableRow key={appointment.id}>
-                    <TableCell>{doctors.find(d => d.id === appointment.doctor_id)?.name || 'Unknown'}</TableCell>
-                    <TableCell>{patients.find(p => p.id === appointment.patient_id)?.name || 'Unknown'}</TableCell>
-                    <TableCell>{appointment.appointment_date}</TableCell>
-                    <TableCell>{appointment.appointment_time}</TableCell>
-                    <TableCell>
-                      <Button
-                        size="small"
-                        color={getStatusColor(appointment.status)}
-                        onClick={() => handleStatusChange(appointment.id, appointment.status === 'pending' ? 'accepted' : 'completed')}
-                      >
-                        {appointment.status}
-                      </Button>
-                    </TableCell>
-                    <TableCell>{appointment.reason}</TableCell>
-                    <TableCell>
-                      <IconButton onClick={() => handleOpenDialog(appointment)}>
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton onClick={() => handleDelete(appointment.id)}>
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Grid>
-      </Grid>
+    <Container maxWidth="lg">
+      <Box mb={4}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          Appointment Management
+        </Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<AddIcon />}
+          onClick={() => handleOpenDialog()}
+        >
+          New Appointment
+        </Button>
+      </Box>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Patient/Guest</TableCell>
+              <TableCell>Doctor</TableCell>
+              <TableCell>Date</TableCell>
+              <TableCell>Time</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {appointments.map((appointment) => (
+              <TableRow key={appointment.id}>
+                <TableCell>
+                  {getPatientName(appointment)}
+                  {appointment.tracking_code && (
+                    <Chip
+                      size="small"
+                      label={`Code: ${appointment.tracking_code}`}
+                      sx={{ ml: 1 }}
+                    />
+                  )}
+                </TableCell>
+                <TableCell>{getDoctorName(appointment)}</TableCell>
+                <TableCell>{getAppointmentDate(appointment)}</TableCell>
+                <TableCell>{getAppointmentTime(appointment)}</TableCell>
+                <TableCell>
+                  <Chip
+                    label={appointment.status}
+                    color={getStatusColor(appointment.status)}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleOpenDialog(appointment)}
+                  >
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleDelete(appointment.id)}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>
-          {selectedAppointment ? 'Chỉnh sửa Lịch hẹn' : 'Thêm Lịch hẹn mới'}
+          {selectedAppointment ? 'Edit Appointment' : 'New Appointment'}
         </DialogTitle>
-        <form onSubmit={handleSubmit}>
-          <DialogContent>
-            <TextField
-              select
-              fullWidth
-              label="Bác sĩ"
-              name="doctor_id"
-              value={formData.doctor_id}
-              onChange={handleInputChange}
-              margin="normal"
-              required
+        <DialogContent>
+          {!selectedAppointment && (
+            <Tabs
+              value={currentTab}
+              onChange={(e, newValue) => setCurrentTab(newValue)}
+              sx={{ mb: 2 }}
             >
-              {doctors.map((doctor) => (
-                <MenuItem key={doctor.id} value={doctor.id}>
-                  {doctor.name}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
-              fullWidth
-              label="Bệnh nhân"
-              name="patient_id"
-              value={formData.patient_id}
-              onChange={handleInputChange}
-              margin="normal"
-              required
-            >
-              {patients.map((patient) => (
-                <MenuItem key={patient.id} value={patient.id}>
-                  {patient.name}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              fullWidth
-              label="Ngày"
-              name="appointment_date"
-              type="date"
-              value={formData.appointment_date}
-              onChange={handleInputChange}
-              margin="normal"
-              required
-              InputLabelProps={{
-                shrink: true,
-              }}
-            />
-            <TextField
-              fullWidth
-              label="Giờ"
-              name="appointment_time"
-              type="time"
-              value={formData.appointment_time}
-              onChange={handleInputChange}
-              margin="normal"
-              required
-              InputLabelProps={{
-                shrink: true,
-              }}
-            />
-            <TextField
-              fullWidth
-              label="Ghi chú"
-              name="reason"
-              value={formData.reason}
-              onChange={handleInputChange}
-              margin="normal"
-              multiline
-              rows={4}
-            />
+              <Tab label="Regular Appointment" />
+              <Tab label="Guest Appointment" />
+            </Tabs>
+          )}
+          <form onSubmit={handleSubmit}>
+            {renderForm()}
             {selectedAppointment && (
               <TextField
                 select
                 fullWidth
-                label="Trạng thái"
+                margin="normal"
                 name="status"
+                label="Status"
                 value={formData.status}
                 onChange={handleInputChange}
-                margin="normal"
                 required
               >
-                <MenuItem value="pending">Chờ xác nhận</MenuItem>
-                <MenuItem value="accepted">Đã xác nhận</MenuItem>
-                <MenuItem value="completed">Hoàn thành</MenuItem>
-                <MenuItem value="rejected">Đã hủy</MenuItem>
+                <MenuItem value="pending">Pending</MenuItem>
+                <MenuItem value="accepted">Accepted</MenuItem>
+                <MenuItem value="completed">Completed</MenuItem>
+                <MenuItem value="cancelled">Cancelled</MenuItem>
+                <MenuItem value="rejected">Rejected</MenuItem>
               </TextField>
             )}
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseDialog}>Hủy</Button>
-            <Button type="submit" variant="contained" color="primary">
-              {selectedAppointment ? 'Cập nhật' : 'Thêm mới'}
-            </Button>
-          </DialogActions>
-        </form>
+          </form>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button onClick={handleSubmit} variant="contained" color="primary">
+            Save
+          </Button>
+        </DialogActions>
       </Dialog>
     </Container>
   );

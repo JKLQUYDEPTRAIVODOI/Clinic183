@@ -6,6 +6,8 @@ import Layout from './components/Layout/Layout';
 import Button from './components/UI/Button';
 import NotFound from './pages/NotFound';
 import LandingPage from './pages/LandingPage';
+import GuestAppointment from './pages/appointment/GuestAppointment';
+import TrackAppointment from './pages/appointment/TrackAppointment';
 // Auth Pages
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
@@ -141,6 +143,8 @@ function App() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
+      <Route path="/book-appointment" element={<GuestAppointment />} />
+      <Route path="/track-appointment" element={<TrackAppointment />} />
 
       {/* Protected Routes */}
       {/* Admin Routes */}

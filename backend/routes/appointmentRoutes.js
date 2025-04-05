@@ -1,30 +1,34 @@
 const express = require('express');
 const router = express.Router();
 const appointmentController = require('../controllers/appointmentController');
-const { authenticateToken, authorizeAdmin, authorizeDoctor, authorizePatient } = require('../middleware/auth');
+const { protect, authorize } = require('../middleware/authMiddleware');
 
-// Get all appointments (admin only)
-router.get('/', authenticateToken, authorizeAdmin, appointmentController.getAllAppointments);
+// Public routes for guest appointments
+router.get('/specializations', appointmentController.getSpecializations);
+router.get('/doctors-by-specialization/:specialization', appointmentController.getDoctorsBySpecialization);
+router.post('/guest', appointmentController.createGuestAppointment);
+router.get('/guest/:tracking_code', appointmentController.getAppointmentByTrackingCode);
 
-// Get appointment by ID
-router.get('/:id', authenticateToken, appointmentController.getAppointmentById);
+// Protected routes
+router.use(protect); // Apply protect middleware to all routes below this
 
-// Get appointments for current patient
-router.get('/patient/me', authenticateToken, authorizePatient, appointmentController.getPatientAppointments);
+// Admin only routes
+router.get('/', authorize('admin'), appointmentController.getAllAppointments);
+router.post('/guest/:appointmentId/assign-doctor', authorize('admin'), appointmentController.assignDoctorToGuest);
+router.post('/guest/convert', authorize('admin'), appointmentController.convertGuestToRegular);
 
-// Get appointments for current doctor
-router.get('/doctor/me', authenticateToken, authorizeDoctor, appointmentController.getDoctorAppointments);
+// Doctor routes
+router.get('/doctor/:doctorId', authorize('doctor'), appointmentController.getDoctorAppointments);
 
-// Create a new appointment
-router.post('/', authenticateToken, appointmentController.createAppointment);
+// Patient routes
+router.get('/patient/:patientId', authorize('patient'), appointmentController.getPatientAppointments);
 
-// Update an appointment
-router.put('/:id', authenticateToken, appointmentController.updateAppointment);
+// General authenticated routes
+router.route('/:id')
+  .get(appointmentController.getAppointmentById)
+  .put(appointmentController.updateAppointment)
+  .delete(appointmentController.deleteAppointment);
 
-// Update appointment status
-router.patch('/:id/status', authenticateToken, appointmentController.updateAppointmentStatus);
-
-// Delete an appointment
-router.delete('/:id', authenticateToken, appointmentController.deleteAppointment);
+router.patch('/:id/status', appointmentController.updateAppointmentStatus);
 
 module.exports = router; 

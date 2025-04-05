@@ -88,6 +88,37 @@ class Doctor {
       throw error;
     }
   }
+
+  // Get all unique specializations
+  static async getSpecializations() {
+    try {
+      const [rows] = await db.query(
+        'SELECT DISTINCT specialization FROM doctors ORDER BY specialization'
+      );
+      return rows.map(row => row.specialization);
+    } catch (error) {
+      console.error('Error in getSpecializations:', error);
+      throw error;
+    }
+  }
+
+  // Get doctors by specialization
+  static async getBySpecialization(specialization) {
+    try {
+      const [rows] = await db.query(
+        `SELECT d.*, u.name, u.email 
+         FROM doctors d 
+         JOIN users u ON d.user_id = u.id 
+         WHERE d.specialization = ?
+         ORDER BY u.name`,
+        [specialization]
+      );
+      return rows;
+    } catch (error) {
+      console.error('Error in getBySpecialization:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = Doctor; 
