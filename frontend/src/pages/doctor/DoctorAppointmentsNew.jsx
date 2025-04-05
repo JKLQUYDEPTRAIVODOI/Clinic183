@@ -164,6 +164,34 @@ const DoctorAppointmentsNew = () => {
     return format(new Date(date), 'dd/MM/yyyy', { locale: vi });
   };
 
+  const getPatientName = (appointment) => {
+    if (appointment.guest_name) {
+      return `${appointment.guest_name} (Khách)`;
+    }
+    return patients.find(p => p.id === appointment.patient_id)?.name || 'N/A';
+  };
+
+  const getAppointmentDate = (appointment) => {
+    if (appointment.tracking_code) {
+      return appointment.preferred_date ? formatDate(appointment.preferred_date) : 'Chưa xác định';
+    }
+    return formatDate(appointment.appointment_date);
+  };
+
+  const getAppointmentTime = (appointment) => {
+    if (appointment.tracking_code) {
+      return appointment.preferred_time || 'Chưa xác định';
+    }
+    return appointment.appointment_time;
+  };
+
+  const getAppointmentReason = (appointment) => {
+    if (appointment.tracking_code) {
+      return appointment.symptoms || 'N/A';
+    }
+    return appointment.reason || 'N/A';
+  };
+
   // Render loading state
   if (loading && appointments.length === 0) {
     return (
@@ -256,11 +284,18 @@ const DoctorAppointmentsNew = () => {
                   sortedAppointments.map((appointment) => (
                     <TableRow key={appointment.id}>
                       <TableCell>
-                        {patients.find(p => p.id === appointment.patient_id)?.name || 'N/A'}
+                        {getPatientName(appointment)}
+                        {appointment.tracking_code && (
+                          <Chip
+                            size="small"
+                            label={`Mã: ${appointment.tracking_code}`}
+                            sx={{ ml: 1 }}
+                          />
+                        )}
                       </TableCell>
-                      <TableCell>{formatDate(appointment.appointment_date)}</TableCell>
-                      <TableCell>{appointment.appointment_time}</TableCell>
-                      <TableCell>{appointment.reason}</TableCell>
+                      <TableCell>{getAppointmentDate(appointment)}</TableCell>
+                      <TableCell>{getAppointmentTime(appointment)}</TableCell>
+                      <TableCell>{getAppointmentReason(appointment)}</TableCell>
                       <TableCell>
                         <Chip
                           label={getStatusLabel(appointment.status)}
@@ -307,23 +342,50 @@ const DoctorAppointmentsNew = () => {
                   <Grid item xs={12}>
                     <Typography variant="subtitle2">Bệnh nhân</Typography>
                     <Typography>
-                      {patients.find(p => p.id === detailDialog.appointment.patient_id)?.name || 'N/A'}
+                      {getPatientName(detailDialog.appointment)}
+                      {detailDialog.appointment.tracking_code && (
+                        <Chip
+                          size="small"
+                          label={`Mã: ${detailDialog.appointment.tracking_code}`}
+                          sx={{ ml: 1 }}
+                        />
+                      )}
                     </Typography>
                   </Grid>
+                  {detailDialog.appointment.tracking_code && (
+                    <>
+                      <Grid item xs={6}>
+                        <Typography variant="subtitle2">Số điện thoại</Typography>
+                        <Typography>{detailDialog.appointment.guest_phone || 'N/A'}</Typography>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Typography variant="subtitle2">Email</Typography>
+                        <Typography>{detailDialog.appointment.guest_email || 'N/A'}</Typography>
+                      </Grid>
+                    </>
+                  )}
                   <Grid item xs={6}>
                     <Typography variant="subtitle2">Ngày</Typography>
                     <Typography>
-                      {formatDate(detailDialog.appointment.appointment_date)}
+                      {getAppointmentDate(detailDialog.appointment)}
                     </Typography>
                   </Grid>
                   <Grid item xs={6}>
                     <Typography variant="subtitle2">Giờ</Typography>
-                    <Typography>{detailDialog.appointment.appointment_time}</Typography>
+                    <Typography>{getAppointmentTime(detailDialog.appointment)}</Typography>
                   </Grid>
                   <Grid item xs={12}>
-                    <Typography variant="subtitle2">Lý do khám</Typography>
-                    <Typography>{detailDialog.appointment.reason}</Typography>
+                    <Typography variant="subtitle2">
+                      {detailDialog.appointment.tracking_code ? 'Triệu chứng' : 'Lý do khám'}
+                    </Typography>
+                    <Typography>{getAppointmentReason(detailDialog.appointment)}</Typography>
                   </Grid>
+                  {detailDialog.appointment.tracking_code && (
+                    <Grid item xs={12}>
+                      <Typography variant="subtitle2">Khoa/Chuyên khoa</Typography>
+                      <Typography>{detailDialog.appointment.department || 'N/A'}</Typography>
+                    </Grid>
+                  )}
                   <Grid item xs={12}>
                     <Typography variant="subtitle2">Trạng thái</Typography>
                     <Chip
@@ -376,4 +438,4 @@ const DoctorAppointmentsNew = () => {
   );
 };
 
-export default DoctorAppointmentsNew; 
+export default DoctorAppointmentsNew;
