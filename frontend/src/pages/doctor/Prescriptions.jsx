@@ -127,24 +127,22 @@ const DoctorPrescriptions = () => {
   const fetchAppointments = async () => {
     try {
       const data = await appointmentService.getDoctorAppointments();
-      // Chỉ lấy các cuộc hẹn đã hoàn thành
-      const completedAppointments = data.filter(app => app.status === 'completed');
+      // Lấy danh sách đơn thuốc hiện tại
+      const currentPrescriptions = await prescriptionService.getDoctorPrescriptions();
+      
+      // Lọc ra các cuộc hẹn đã hoàn thành và chưa có đơn thuốc
+      const completedAppointments = data.filter(app => {
+        const hasNoPrescription = !currentPrescriptions.some(
+          prescription => prescription.appointment_id === app.id
+        );
+        return app.status === 'completed' && hasNoPrescription;
+      });
       
       // Lấy thông tin medical record cho mỗi appointment
-      const appointmentsWithMedicalRecords = completedAppointments.map(appointment => {
-        // Nếu chưa có medical_record_id, trả về appointment như cũ
-        if (!appointment.medical_record_id) {
-          return {
-            ...appointment,
-            diagnosis: appointment.diagnosis || ''
-          };
-        }
-        // Nếu đã có medical_record_id, trả về appointment với thông tin hiện có
-        return {
-          ...appointment,
-          diagnosis: appointment.diagnosis || ''
-        };
-      });
+      const appointmentsWithMedicalRecords = completedAppointments.map(appointment => ({
+        ...appointment,
+        diagnosis: appointment.diagnosis || ''
+      }));
       
       setAppointments(appointmentsWithMedicalRecords);
     } catch (error) {
@@ -292,53 +290,19 @@ const DoctorPrescriptions = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateStep(activeStep)) return;
+    
+    if (!validateStep(activeStep)) {
+      return;
+    }
 
     try {
       setLoading(true);
       setError(null);
 
-      if (!selectedAppointment) {
-        throw new Error('Vui lòng chọn bệnh nhân');
-      }
-
-      if (!formData.diagnosis) {
-        throw new Error('Vui lòng nhập chẩn đoán');
-      }
-
-      // Tạo hoặc cập nhật medical record
-      let medicalRecordId;
-      try {
-        if (selectedPrescription) {
-          // Nếu đang cập nhật đơn thuốc, sử dụng medical_record_id hiện có
-          medicalRecordId = selectedPrescription.medical_record_id;
-          // Cập nhật chẩn đoán trong medical record
-          await prescriptionService.updateMedicalRecord(medicalRecordId, {
-            diagnosis: formData.diagnosis
-          });
-        } else {
-          // Nếu tạo mới đơn thuốc, tạo medical record mới
-          const medicalRecord = await prescriptionService.createMedicalRecord({
-            appointment_id: selectedAppointment.id,
-            diagnosis: formData.diagnosis
-          });
-          medicalRecordId = medicalRecord.id;
-        }
-      } catch (error) {
-        console.error('Error handling medical record:', error);
-        throw new Error('Không thể cập nhật thông tin khám bệnh: ' + (error.response?.data?.message || error.message));
-      }
-
-      // Tạo hoặc cập nhật đơn thuốc
       const prescriptionData = {
-        medical_record_id: medicalRecordId,
-        items: formData.items.map(item => ({
-          medicine_id: item.medicine_id,
-          dosage: item.dosage,
-          frequency: item.frequency,
-          duration: item.duration,
-          instructions: item.instructions || ''
-        }))
+        appointment_id: selectedAppointment.id,
+        diagnosis: formData.diagnosis,
+        items: formData.items
       };
 
       if (selectedPrescription) {
@@ -347,12 +311,17 @@ const DoctorPrescriptions = () => {
         await prescriptionService.createPrescription(prescriptionData);
       }
 
+      // Refresh both prescriptions and appointments lists
+      await Promise.all([
+        fetchPrescriptions(),
+        fetchAppointments()
+      ]);
+
       handleClose();
-      fetchPrescriptions();
-      fetchAppointments();
+      setError(null);
     } catch (error) {
       console.error('Error saving prescription:', error);
-      setError(error.response?.data?.message || error.message || 'Có lỗi xảy ra khi lưu đơn thuốc');
+      setError('Không thể lưu đơn thuốc. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
@@ -377,36 +346,85 @@ const DoctorPrescriptions = () => {
                   <Card 
                     sx={{ 
                       cursor: 'pointer',
-                      bgcolor: selectedAppointment?.id === appointment.id ? 'primary.light' : 'background.paper',
+                      transition: 'all 0.3s ease',
+                      transform: selectedAppointment?.id === appointment.id ? 'scale(1.02)' : 'scale(1)',
+                      border: selectedAppointment?.id === appointment.id ? '2px solid #1976d2' : '1px solid #e0e0e0',
+                      boxShadow: selectedAppointment?.id === appointment.id 
+                        ? '0 4px 12px rgba(0, 0, 0, 0.15)' 
+                        : '0 1px 3px rgba(0, 0, 0, 0.12)',
+                      bgcolor: selectedAppointment?.id === appointment.id ? 'primary.50' : 'background.paper',
                       '&:hover': {
-                        bgcolor: 'action.hover'
+                        transform: 'scale(1.02)',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                        bgcolor: selectedAppointment?.id === appointment.id ? 'primary.50' : 'grey.50'
                       }
                     }}
                     onClick={() => handleAppointmentSelect(appointment)}
                   >
                     <CardContent>
-                      <Typography variant="h6" component="div">
-                        {appointment.patient_name}
-                      </Typography>
                       <Grid container spacing={2}>
-                        <Grid item xs={12} sm={6}>
-                          <Typography color="text.secondary">
-                            Ngày khám: {formatDate(appointment.appointment_date)}
+                        <Grid item xs={12}>
+                          <Typography variant="h6" component="div" sx={{ 
+                            color: selectedAppointment?.id === appointment.id ? 'primary.main' : 'text.primary',
+                            fontWeight: selectedAppointment?.id === appointment.id ? 600 : 400
+                          }}>
+                            {appointment.patient_name}
                           </Typography>
                         </Grid>
                         <Grid item xs={12} sm={6}>
-                          <Typography color="text.secondary">
-                            Giờ khám: {formatTime(appointment.appointment_time)}
+                          <Typography variant="body1" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <strong>Ngày khám:</strong> {formatDate(appointment.appointment_date)}
                           </Typography>
                         </Grid>
+                        <Grid item xs={12} sm={6}>
+                          <Typography variant="body1" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <strong>Giờ khám:</strong> {formatTime(appointment.appointment_time)}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={12}>
+                          <Typography variant="body1" color="text.secondary" sx={{ 
+                            mt: 1,
+                            p: 1,
+                            bgcolor: 'grey.50',
+                            borderRadius: 1
+                          }}>
+                            <strong>Chẩn đoán:</strong> {appointment.diagnosis || 'Chưa có'}
+                          </Typography>
+                        </Grid>
+                        {appointment.notes && (
+                          <Grid item xs={12}>
+                            <Typography variant="body2" color="text.secondary" sx={{
+                              fontStyle: 'italic',
+                              p: 1,
+                              bgcolor: 'grey.50',
+                              borderRadius: 1
+                            }}>
+                              <strong>Ghi chú:</strong> {appointment.notes}
+                            </Typography>
+                          </Grid>
+                        )}
                       </Grid>
-                      <Typography color="text.secondary" sx={{ mt: 1 }}>
-                        <strong>Chẩn đoán:</strong> {appointment.diagnosis || 'Chưa có'}
-                      </Typography>
-                      {appointment.notes && (
-                        <Typography color="text.secondary">
-                          <strong>Ghi chú:</strong> {appointment.notes}
-                        </Typography>
+                      {selectedAppointment?.id === appointment.id && (
+                        <Box sx={{ 
+                          position: 'absolute', 
+                          top: 10, 
+                          right: 10, 
+                          color: 'primary.main',
+                          bgcolor: 'primary.50',
+                          borderRadius: '50%',
+                          width: 24,
+                          height: 24,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <Box sx={{ 
+                            width: 16, 
+                            height: 16, 
+                            borderRadius: '50%', 
+                            bgcolor: 'primary.main' 
+                          }} />
+                        </Box>
                       )}
                     </CardContent>
                   </Card>

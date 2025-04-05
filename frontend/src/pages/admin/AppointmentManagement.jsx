@@ -29,6 +29,7 @@ import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/ico
 import appointmentService from '../../services/appointmentService';
 import doctorService from '../../services/doctorService';
 import patientService from '../../services/patientService';
+import { format } from 'date-fns';
 
 const AppointmentManagement = () => {
   const [appointments, setAppointments] = useState([]);
@@ -75,34 +76,44 @@ const AppointmentManagement = () => {
 
   const formatDateForInput = (dateString) => {
     if (!dateString) return '';
-    // Convert ISO date string to yyyy-MM-dd format
-    return dateString.split('T')[0];
+    try {
+      // Ensure we're working with the local date
+      const [year, month, day] = dateString.split('-');
+      if (year && month && day) {
+        return `${year}-${month}-${day}`;
+      }
+      const date = new Date(dateString);
+      const userTimezoneOffset = date.getTimezoneOffset() * 60000;
+      const localDate = new Date(date.getTime() + userTimezoneOffset);
+      return format(localDate, 'yyyy-MM-dd');
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return '';
+    }
   };
 
   const formatTimeForInput = (timeString) => {
     if (!timeString) return '';
-    // If it's already in HH:mm format, return as is
-    if (timeString.length === 5) return timeString;
-    // If it's in HH:mm:ss format, remove seconds
-    if (timeString.length === 8) return timeString.substring(0, 5);
-    // If it's an ISO string, extract time part
-    const time = new Date(timeString).toTimeString().substring(0, 5);
-    return time === 'Invalid' ? '' : time;
+    try {
+      // If it's already in HH:mm format, return as is
+      if (timeString.length === 5) return timeString;
+      // If it's in HH:mm:ss format, remove seconds
+      if (timeString.length === 8) return timeString.substring(0, 5);
+      // If it's an ISO string, extract time part
+      const time = new Date(timeString).toTimeString().substring(0, 5);
+      return time === 'Invalid' ? '' : time;
+    } catch (error) {
+      console.error('Error formatting time:', error);
+      return ''; // Return empty string on error
+    }
   };
 
   const fetchAppointments = async () => {
     try {
       setLoading(true);
       const data = await appointmentService.getAllAppointments();
-      // Format dates and times before setting to state
-      const formattedData = data.map(appointment => ({
-        ...appointment,
-        appointment_date: formatDateForInput(appointment.appointment_date),
-        appointment_time: formatTimeForInput(appointment.appointment_time),
-        preferred_date: formatDateForInput(appointment.preferred_date),
-        preferred_time: formatTimeForInput(appointment.preferred_time)
-      }));
-      setAppointments(formattedData);
+      // Don't format dates here, just set the raw data
+      setAppointments(data);
     } catch (err) {
       setError('Failed to fetch appointments');
       console.error('Error fetching appointments:', err);
@@ -222,14 +233,14 @@ const AppointmentManagement = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      setLoading(true);
       const dataToSubmit = {
         ...formData,
-        // Format dates before sending to API
-        appointment_date: formData.appointment_date ? new Date(formData.appointment_date).toISOString().split('T')[0] : null,
+        // Preserve the date exactly as entered without timezone conversion
+        appointment_date: formData.appointment_date || null,
         appointment_time: formData.appointment_time || null,
-        preferred_date: formData.preferred_date ? new Date(formData.preferred_date).toISOString().split('T')[0] : null,
+        preferred_date: formData.preferred_date || null,
         preferred_time: formData.preferred_time || null,
-        // Include other fields that might be needed
         patient_id: formData.patient_id || null,
         doctor_id: formData.doctor_id || null,
         status: formData.status || 'pending',
@@ -241,55 +252,20 @@ const AppointmentManagement = () => {
         department: formData.department || ''
       };
 
-      let updatedAppointment;
       if (selectedAppointment) {
-        // If status is being changed, use updateAppointmentStatus
-        if (selectedAppointment.status !== formData.status) {
-          await appointmentService.updateAppointmentStatus(selectedAppointment.id, formData.status);
-        }
-        updatedAppointment = await appointmentService.updateAppointment(selectedAppointment.id, dataToSubmit);
-        
-        // Update the local state immediately
-        setAppointments(prevAppointments => 
-          prevAppointments.map(apt => 
-            apt.id === selectedAppointment.id 
-              ? {
-                  ...apt,
-                  ...updatedAppointment,
-                  status: formData.status, // Ensure status is updated
-                  appointment_date: formatDateForInput(updatedAppointment.appointment_date),
-                  appointment_time: formatTimeForInput(updatedAppointment.appointment_time),
-                  preferred_date: formatDateForInput(updatedAppointment.preferred_date),
-                  preferred_time: formatTimeForInput(updatedAppointment.preferred_time)
-                }
-              : apt
-          )
-        );
+        await appointmentService.updateAppointment(selectedAppointment.id, dataToSubmit);
       } else {
-        if (currentTab === 0) {
-          updatedAppointment = await appointmentService.createAppointment(dataToSubmit);
-        } else {
-          updatedAppointment = await appointmentService.createGuestAppointment(dataToSubmit);
-        }
-        // Add the new appointment to local state
-        setAppointments(prevAppointments => [
-          ...prevAppointments,
-          {
-            ...updatedAppointment,
-            appointment_date: formatDateForInput(updatedAppointment.appointment_date),
-            appointment_time: formatTimeForInput(updatedAppointment.appointment_time),
-            preferred_date: formatDateForInput(updatedAppointment.preferred_date),
-            preferred_time: formatTimeForInput(updatedAppointment.preferred_time)
-          }
-        ]);
+        await appointmentService.createAppointment(dataToSubmit);
       }
 
       handleCloseDialog();
-      // Refresh the full list to ensure consistency
       await fetchAppointments();
-    } catch (err) {
-      setError('Failed to save appointment');
-      console.error('Error saving appointment:', err);
+      setError(null);
+    } catch (error) {
+      console.error('Error saving appointment:', error);
+      setError('Không thể lưu lịch hẹn. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -381,17 +357,75 @@ const AppointmentManagement = () => {
   };
 
   const getAppointmentDate = (appointment) => {
-    if (appointment.tracking_code) {
-      return appointment.preferred_date ? formatDateForInput(appointment.preferred_date) : 'Chưa xác định';
+    try {
+      let dateStr;
+      if (appointment.tracking_code) {
+        dateStr = appointment.preferred_date;
+      } else {
+        dateStr = appointment.appointment_date;
+      }
+
+      if (!dateStr) return 'Chưa xác định';
+
+      // Handle ISO string format
+      if (dateStr.includes('T')) {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('vi-VN', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+      }
+
+      // Handle YYYY-MM-DD format
+      const [year, month, day] = dateStr.split('-');
+      if (year && month && day) {
+        return `${day}/${month}/${year}`;
+      }
+
+      return 'Chưa xác định';
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Chưa xác định';
     }
-    return formatDateForInput(appointment.appointment_date);
   };
 
   const getAppointmentTime = (appointment) => {
-    if (appointment.tracking_code) {
-      return appointment.preferred_time ? formatTimeForInput(appointment.preferred_time) : 'Chưa xác định';
+    try {
+      let timeStr;
+      if (appointment.tracking_code) {
+        timeStr = appointment.preferred_time;
+      } else {
+        timeStr = appointment.appointment_time;
+      }
+
+      if (!timeStr) return 'Chưa xác định';
+
+      // If time includes seconds (HH:mm:ss), remove seconds
+      if (timeStr.length === 8) {
+        return timeStr.substring(0, 5);
+      }
+
+      // If time is already in HH:mm format
+      if (timeStr.length === 5) {
+        return timeStr;
+      }
+
+      // If time is in a different format, try to parse it
+      const date = new Date(timeStr);
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleTimeString('vi-VN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        });
+      }
+
+      return timeStr;
+    } catch (error) {
+      console.error('Error formatting time:', error);
+      return 'Chưa xác định';
     }
-    return formatTimeForInput(appointment.appointment_time);
   };
 
   const renderForm = () => {
@@ -607,22 +641,22 @@ const AppointmentManagement = () => {
         </Alert>
       )}
 
-      <TableContainer component={Paper}>
-        <Table>
+      <TableContainer component={Paper} sx={{ width: '100%', overflowX: 'auto' }}>
+        <Table sx={{ minWidth: 1000 }}>
           <TableHead>
             <TableRow>
-              <TableCell>Patient/Guest</TableCell>
-              <TableCell>Doctor</TableCell>
-              <TableCell>Date</TableCell>
-              <TableCell>Time</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Actions</TableCell>
+              <TableCell width="25%" sx={{ fontWeight: 600, backgroundColor: 'grey.50' }}>Patient/Guest</TableCell>
+              <TableCell width="20%" sx={{ fontWeight: 600, backgroundColor: 'grey.50' }}>Doctor</TableCell>
+              <TableCell width="15%" sx={{ fontWeight: 600, backgroundColor: 'grey.50' }}>Date</TableCell>
+              <TableCell width="10%" sx={{ fontWeight: 600, backgroundColor: 'grey.50' }}>Time</TableCell>
+              <TableCell width="15%" sx={{ fontWeight: 600, backgroundColor: 'grey.50' }}>Status</TableCell>
+              <TableCell width="15%" sx={{ fontWeight: 600, backgroundColor: 'grey.50' }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {appointments.map((appointment) => (
               <TableRow key={appointment.id}>
-                <TableCell>
+                <TableCell width="25%">
                   {getPatientName(appointment)}
                   {appointment.tracking_code && (
                     <Chip
@@ -632,17 +666,17 @@ const AppointmentManagement = () => {
                     />
                   )}
                 </TableCell>
-                <TableCell>{getDoctorName(appointment)}</TableCell>
-                <TableCell>{getAppointmentDate(appointment)}</TableCell>
-                <TableCell>{getAppointmentTime(appointment)}</TableCell>
-                <TableCell>
+                <TableCell width="20%">{getDoctorName(appointment)}</TableCell>
+                <TableCell width="15%">{getAppointmentDate(appointment)}</TableCell>
+                <TableCell width="10%">{getAppointmentTime(appointment)}</TableCell>
+                <TableCell width="15%">
                   <Chip
                     label={appointment.status}
                     color={getStatusColor(appointment.status)}
                     size="small"
                   />
                 </TableCell>
-                <TableCell>
+                <TableCell width="15%">
                   <IconButton
                     size="small"
                     onClick={() => handleOpenDialog(appointment)}

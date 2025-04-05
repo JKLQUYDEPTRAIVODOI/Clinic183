@@ -57,6 +57,42 @@ const UserManagement = () => {
     confirmPassword: '',
   });
 
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      // Lấy tất cả users
+      const response = await userService.getAllUsers();
+      
+      // Lọc theo role nếu không phải "all"
+      let filteredUsers = response;
+      if (selectedRole !== 'all') {
+        filteredUsers = response.filter(user => user.role === selectedRole);
+      }
+
+      // Lọc theo search term nếu có
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        filteredUsers = filteredUsers.filter(user => 
+          user.name?.toLowerCase().includes(searchLower) ||
+          user.email?.toLowerCase().includes(searchLower)
+        );
+      }
+
+      // Phân trang
+      const start = page * rowsPerPage;
+      const paginatedUsers = filteredUsers.slice(start, start + rowsPerPage);
+
+      setUsers(paginatedUsers);
+      setTotalRows(filteredUsers.length);
+      setError(null);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      setError('Không thể tải danh sách người dùng');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!hasRole('admin')) {
       navigate('/login');
@@ -64,42 +100,6 @@ const UserManagement = () => {
   }, [hasRole, navigate]);
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        setLoading(true);
-        // Lấy tất cả users
-        const response = await userService.getAllUsers();
-        
-        // Lọc theo role nếu không phải "all"
-        let filteredUsers = response;
-        if (selectedRole !== 'all') {
-          filteredUsers = response.filter(user => user.role === selectedRole);
-        }
-
-        // Lọc theo search term nếu có
-        if (searchTerm) {
-          const searchLower = searchTerm.toLowerCase();
-          filteredUsers = filteredUsers.filter(user => 
-            user.name?.toLowerCase().includes(searchLower) ||
-            user.email?.toLowerCase().includes(searchLower)
-          );
-        }
-
-        // Phân trang
-        const start = page * rowsPerPage;
-        const paginatedUsers = filteredUsers.slice(start, start + rowsPerPage);
-
-        setUsers(paginatedUsers);
-        setTotalRows(filteredUsers.length);
-        setError(null);
-      } catch (error) {
-        console.error('Error fetching users:', error);
-        setError('Không thể tải danh sách người dùng');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     const debounce = setTimeout(() => {
       fetchUsers();
     }, 500);
@@ -173,30 +173,19 @@ const UserManagement = () => {
     e.preventDefault();
     try {
       setLoading(true);
-      setError(null);
-
       if (selectedUser) {
-        await userService.updateUser(selectedUser.id, {
-          name: formData.name,
-          email: formData.email,
-          role: formData.role,
-        });
+        await userService.updateUser(selectedUser.id, formData);
       } else {
-        if (formData.password !== formData.confirmPassword) {
-          setError('Mật khẩu không khớp');
-          return;
-        }
-        await userService.createUser({
-          name: formData.name,
-          email: formData.email,
-          role: formData.role,
-          password: formData.password,
-        });
+        await userService.createUser(formData);
       }
       
+      // Đóng dialog và refresh data
       handleClose();
+      await fetchUsers(); // Refresh danh sách người dùng
+      setError(null);
     } catch (error) {
-      setError(error.message || 'Có lỗi xảy ra');
+      console.error('Error saving user:', error);
+      setError('Không thể lưu thông tin người dùng. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
@@ -222,14 +211,17 @@ const UserManagement = () => {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDeleteUser = async (userId) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa người dùng này?')) {
       try {
         setLoading(true);
+        await userService.deleteUser(userId);
+        // Refresh danh sách người dùng sau khi xóa
+        await fetchUsers();
         setError(null);
-        await userService.deleteUser(id);
       } catch (error) {
-        setError('Không thể xóa người dùng');
+        console.error('Error deleting user:', error);
+        setError('Không thể xóa người dùng. Vui lòng thử lại.');
       } finally {
         setLoading(false);
       }
@@ -341,7 +333,7 @@ const UserManagement = () => {
                         <IconButton
                           size="small"
                           color="error"
-                          onClick={() => handleDelete(user.id)}
+                          onClick={() => handleDeleteUser(user.id)}
                         >
                           <DeleteIcon fontSize="small" />
                         </IconButton>

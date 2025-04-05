@@ -87,68 +87,88 @@ const LandingPage = () => {
                 Hệ thống quản lý phòng khám hiện đại, mang đến trải nghiệm chăm sóc sức khỏe tốt nhất cho bạn
               </Typography>
               <Box sx={{ mt: 4 }}>
-                <Button
-                  variant="contained"
-                  size="large"
-                  onClick={() => navigate('/book-appointment')}
+                {/* Hàng 1: Đặt Lịch Ngay và Tra Cứu Lịch Hẹn */}
+                <Box
                   sx={{
-                    mr: 2,
-                    bgcolor: 'white',
-                    color: 'primary.main',
-                    '&:hover': {
-                      bgcolor: 'grey.100',
-                    },
+                    display: 'flex',
+                    justifyContent: 'center',
+                    gap: 2, // Khoảng cách giữa các button
+                    mb: 2, // Khoảng cách giữa 2 hàng
                   }}
                 >
-                  Đặt Lịch Ngay
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="large"
-                  onClick={() => navigate('/track-appointment')}
+                  <Button
+                    variant="contained"
+                    size="large"
+                    onClick={() => navigate('/book-appointment')}
+                    sx={{
+                      minWidth: 180, // Đảm bảo kích thước đồng đều
+                      bgcolor: 'white',
+                      color: 'primary.main',
+                      '&:hover': {
+                        bgcolor: 'grey.100',
+                      },
+                    }}
+                  >
+                    Đặt Lịch Ngay
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="large"
+                    onClick={() => navigate('/track-appointment')}
+                    sx={{
+                      minWidth: 180,
+                      borderColor: 'white',
+                      color: 'white',
+                      '&:hover': {
+                        borderColor: 'grey.100',
+                        bgcolor: 'rgba(255, 255, 255, 0.1)',
+                      },
+                    }}
+                  >
+                    Tra Cứu Lịch Hẹn
+                  </Button>
+                </Box>
+                {/* Hàng 2: Đăng Ký và Đăng Nhập */}
+                <Box
                   sx={{
-                    mr: 2,
-                    borderColor: 'white',
-                    color: 'white',
-                    '&:hover': {
-                      borderColor: 'grey.100',
-                      bgcolor: 'rgba(255, 255, 255, 0.1)',
-                    },
+                    display: 'flex',
+                    justifyContent: 'center',
+                    gap: 2,
                   }}
                 >
-                  Tra Cứu Lịch Hẹn
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="large"
-                  onClick={() => navigate('/register')}
-                  sx={{
-                    mr: 2,
-                    borderColor: 'white',
-                    color: 'white',
-                    '&:hover': {
-                      borderColor: 'grey.100',
-                      bgcolor: 'rgba(255, 255, 255, 0.1)',
-                    },
-                  }}
-                >
-                  Đăng Ký
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="large"
-                  onClick={() => navigate('/login')}
-                  sx={{
-                    borderColor: 'white',
-                    color: 'white',
-                    '&:hover': {
-                      borderColor: 'grey.100',
-                      bgcolor: 'rgba(255, 255, 255, 0.1)',
-                    },
-                  }}
-                >
-                  Đăng Nhập
-                </Button>
+                  <Button
+                    variant="outlined"
+                    size="large"
+                    onClick={() => navigate('/register')}
+                    sx={{
+                      minWidth: 180,
+                      borderColor: 'white',
+                      color: 'white',
+                      '&:hover': {
+                        borderColor: 'grey.100',
+                        bgcolor: 'rgba(255, 255, 255, 0.1)',
+                      },
+                    }}
+                  >
+                    Đăng Ký
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="large"
+                    onClick={() => navigate('/login')}
+                    sx={{
+                      minWidth: 180,
+                      borderColor: 'white',
+                      color: 'white',
+                      '&:hover': {
+                        borderColor: 'grey.100',
+                        bgcolor: 'rgba(255, 255, 255, 0.1)',
+                      },
+                    }}
+                  >
+                    Đăng Nhập
+                  </Button>
+                </Box>
               </Box>
             </Grid>
             <Grid item xs={12} md={6}>
@@ -362,4 +382,4 @@ const LandingPage = () => {
   );
 };
 
-export default LandingPage; 
+export default LandingPage;
