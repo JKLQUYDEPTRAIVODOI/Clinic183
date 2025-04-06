@@ -1,26 +1,31 @@
-import React, { useState, useEffect } from 'react';
+import { Cancel as CancelIcon, Edit as EditIcon, Save as SaveIcon } from '@mui/icons-material';
 import {
-  Box,
-  Container,
-  Grid,
-  Paper,
-  Typography,
-  TextField,
-  IconButton,
   Alert,
-  Snackbar,
+  Box,
+  Button,
+  CircularProgress,
+  Container,
   Divider,
   FormControl,
+  Grid,
   InputLabel,
-  Select,
   MenuItem,
-  Button,
-  CircularProgress
+  Paper,
+  Select,
+  Snackbar,
+  TextField,
+  Typography
 } from '@mui/material';
-import { Edit as EditIcon, Save as SaveIcon, Cancel as CancelIcon } from '@mui/icons-material';
-import { format } from 'date-fns';
-import patientService from '../../services/patientService';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import patientService from '../../services/patientService';
+
+// Hàm chuyển đổi chuỗi ISO sang ngày địa phương dạng yyyy-mm-dd
+const getLocalDate = (dateStr) => {
+  const date = new Date(dateStr);
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  return date.toISOString().split('T')[0];
+}
 
 const Profile = () => {
   const { user } = useAuth();
@@ -51,6 +56,7 @@ const Profile = () => {
     try {
       setLoading(true);
       const data = await patientService.getMyProfile();
+      console.log('Profile data:', data);
       setProfile(data);
       setEditedProfile(data);
     } catch (error) {
@@ -78,17 +84,23 @@ const Profile = () => {
   const handleSave = async () => {
     try {
       setLoading(true);
+      // Chuyển đổi ngày sinh về định dạng yyyy-mm-dd trước khi gửi đi
+      const updatedProfile = {
+        ...editedProfile,
+        date_of_birth: getLocalDate(editedProfile.date_of_birth)
+      };
+
       await patientService.updateMyProfile({
-        date_of_birth: editedProfile.date_of_birth,
-        gender: editedProfile.gender,
-        blood_group: editedProfile.blood_group,
-        address: editedProfile.address,
-        phone: editedProfile.phone,
-        medical_history: editedProfile.medical_history,
-        allergies: editedProfile.allergies,
-        current_medications: editedProfile.current_medications
+        date_of_birth: updatedProfile.date_of_birth,
+        gender: updatedProfile.gender,
+        blood_group: updatedProfile.blood_group,
+        address: updatedProfile.address,
+        phone: updatedProfile.phone,
+        medical_history: updatedProfile.medical_history,
+        allergies: updatedProfile.allergies,
+        current_medications: updatedProfile.current_medications
       });
-      setProfile(editedProfile);
+      setProfile(updatedProfile);
       setIsEditing(false);
       setAlert({
         open: true,
@@ -126,16 +138,16 @@ const Profile = () => {
         </Box>
       </Container>
     );
-    }
+  }
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
           Hồ sơ cá nhân
-              </Typography>
+        </Typography>
         <Box>
-              {!isEditing ? (
+          {!isEditing ? (
             <Button
               variant="contained"
               startIcon={<EditIcon />}
@@ -148,7 +160,7 @@ const Profile = () => {
             >
               Chỉnh sửa
             </Button>
-              ) : (
+          ) : (
             <Box display="flex" gap={1}>
               <Button
                 variant="contained"
@@ -176,10 +188,10 @@ const Profile = () => {
               >
                 Hủy
               </Button>
-                </Box>
-              )}
             </Box>
-            </Box>
+          )}
+        </Box>
+      </Box>
 
       <Paper 
         elevation={3} 
@@ -215,16 +227,25 @@ const Profile = () => {
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Ngày sinh"
-                  type="date"
-                  value={isEditing ? editedProfile.date_of_birth : profile.date_of_birth}
-                  onChange={handleChange('date_of_birth')}
-                  disabled={!isEditing}
-                  InputLabelProps={{ shrink: true }}
-                  sx={{ bgcolor: 'background.paper' }}
-                />
+                {isEditing ? (
+                  <TextField
+                    fullWidth
+                    label="Ngày sinh"
+                    type="date"
+                    value={editedProfile.date_of_birth ? getLocalDate(editedProfile.date_of_birth) : ''}
+                    onChange={handleChange('date_of_birth')}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ bgcolor: 'background.paper' }}
+                  />
+                ) : (
+                  <TextField
+                    fullWidth
+                    label="Ngày sinh"
+                    value={profile.date_of_birth ? new Date(profile.date_of_birth).toLocaleDateString('vi-VN') : ''}
+                    disabled
+                    sx={{ bgcolor: 'background.paper' }}
+                  />
+                )}
               </Grid>
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth sx={{ bgcolor: 'background.paper' }}>
@@ -348,4 +369,4 @@ const Profile = () => {
   );
 };
 
-export default Profile; 
+export default Profile;

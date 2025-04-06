@@ -25,30 +25,41 @@ exports.updateMyProfile = async (req, res) => {
       return res.status(404).json({ message: 'Patient not found' });
     }
     
-    const updated = await Patient.update(patient.id, {
-      date_of_birth,
-      gender,
-      blood_group,
-      address,
-      phone,
-      medical_history,
-      allergies,
-      current_medications
-    });
-    
-    if (!updated) {
-      return res.status(400).json({ message: 'Failed to update profile' });
+    try {
+      const updated = await Patient.update(patient.id, {
+        date_of_birth,
+        gender,
+        blood_group,
+        address,
+        phone,
+        medical_history,
+        allergies,
+        current_medications
+      });
+      
+      if (!updated) {
+        return res.status(400).json({ message: 'Failed to update profile' });
+      }
+      
+      const updatedPatient = await Patient.getByUserId(req.user.id);
+      
+      res.json({
+        message: 'Profile updated successfully',
+        patient: updatedPatient
+      });
+    } catch (updateError) {
+      console.error('Error in Patient.update:', updateError);
+      return res.status(500).json({ 
+        message: 'Error updating profile in database', 
+        error: updateError.message 
+      });
     }
-    
-    const updatedPatient = await Patient.getByUserId(req.user.id);
-    
-    res.json({
-      message: 'Profile updated successfully',
-      patient: updatedPatient
-    });
   } catch (error) {
     console.error('Error updating profile:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error.message 
+    });
   }
 };
 

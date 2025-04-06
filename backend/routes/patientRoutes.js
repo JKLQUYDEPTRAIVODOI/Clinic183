@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const patientController = require('../controllers/patientController');
-const { authenticateToken, authorizeDoctor, authorizeAdmin } = require('../middleware/auth');
+const { authenticateToken, authorizeDoctor, authorizeAdmin, authorizePatient } = require('../middleware/auth');
 
 // Middleware to authorize admin or doctor
 const authorizeAdminOrDoctor = (req, res, next) => {
@@ -11,22 +11,37 @@ const authorizeAdminOrDoctor = (req, res, next) => {
   next();
 };
 
+// Middleware to authorize admin, doctor, or the patient themselves
+const authorizeAdminDoctorOrSelf = (req, res, next) => {
+  // Allow admin and doctor
+  if (req.user && (req.user.role === 'admin' || (req.user.role === 'doctor' && req.doctor))) {
+    return next();
+  }
+  
+  // Allow patient to access their own data
+  if (req.user && req.user.role === 'patient' && req.patient && req.params.id == req.patient.id) {
+    return next();
+  }
+  
+  return res.status(403).json({ message: 'Access denied. You can only access your own data.' });
+};
+
 // Get current patient's profile
-router.get('/me', authenticateToken, patientController.getMyProfile);
+router.get('/me', authenticateToken, authorizePatient, patientController.getMyProfile);
+
+// Update current patient's profile
+router.put('/me', authenticateToken, authorizePatient, patientController.updateMyProfile);
+
+// Tìm kiếm bệnh nhân (admin or doctor only)
+router.get('/search', authenticateToken, authorizeAdminOrDoctor, patientController.searchPatients);
 
 // Get all patients (admin or doctor only)
 router.get('/', authenticateToken, authorizeAdminOrDoctor, patientController.getAllPatients);
 
-// Get patient by ID (admin or doctor only)
-router.get('/:id', authenticateToken, authorizeAdminOrDoctor, patientController.getPatientById);
+// Get patient by ID (admin, doctor, or the patient themselves)
+router.get('/:id', authenticateToken, authorizeAdminDoctorOrSelf, patientController.getPatientById);
 
-// Update patient (admin or doctor only)
-router.put('/:id', authenticateToken, authorizeAdminOrDoctor, patientController.updatePatient);
+// Update patient (admin, doctor, or the patient themselves)
+router.put('/:id', authenticateToken, authorizeAdminDoctorOrSelf, patientController.updatePatient);
 
-// Update current patient's profile
-router.put('/me', authenticateToken, patientController.updateMyProfile);
-
-// Tìm kiếm bệnh nhân
-router.get('/search', authenticateToken, patientController.searchPatients);
-
-module.exports = router; 
+module.exports = router;
