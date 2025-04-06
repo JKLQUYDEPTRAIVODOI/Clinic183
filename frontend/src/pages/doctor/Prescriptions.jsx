@@ -299,10 +299,27 @@ const DoctorPrescriptions = () => {
       setLoading(true);
       setError(null);
 
+      // Nếu chưa có medical_record_id, tạo medical record mới
+      let medicalRecordId = selectedAppointment.medical_record_id;
+      
+      if (!medicalRecordId) {
+        const medicalRecord = await prescriptionService.createMedicalRecord({
+          appointment_id: selectedAppointment.id,
+          diagnosis: formData.diagnosis
+        });
+        medicalRecordId = medicalRecord.id;
+      }
+
       const prescriptionData = {
-        appointment_id: selectedAppointment.id,
+        medical_record_id: medicalRecordId,
         diagnosis: formData.diagnosis,
-        items: formData.items
+        items: formData.items.map(item => ({
+          medicine_id: item.medicine_id,
+          dosage: item.dosage,
+          frequency: item.frequency,
+          duration: item.duration,
+          instructions: item.instructions || ''
+        }))
       };
 
       if (selectedPrescription) {
@@ -311,13 +328,12 @@ const DoctorPrescriptions = () => {
         await prescriptionService.createPrescription(prescriptionData);
       }
 
-      // Refresh both prescriptions and appointments lists
+      handleClose();
+      // Refresh cả danh sách đơn thuốc và danh sách cuộc hẹn
       await Promise.all([
         fetchPrescriptions(),
         fetchAppointments()
       ]);
-
-      handleClose();
       setError(null);
     } catch (error) {
       console.error('Error saving prescription:', error);

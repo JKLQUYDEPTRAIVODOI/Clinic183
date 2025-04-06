@@ -236,7 +236,6 @@ const AppointmentManagement = () => {
       setLoading(true);
       const dataToSubmit = {
         ...formData,
-        // Preserve the date exactly as entered without timezone conversion
         appointment_date: formData.appointment_date || null,
         appointment_time: formData.appointment_time || null,
         preferred_date: formData.preferred_date || null,
@@ -253,9 +252,21 @@ const AppointmentManagement = () => {
       };
 
       if (selectedAppointment) {
+        if (selectedAppointment.status !== formData.status) {
+          await appointmentService.updateAppointmentStatus(selectedAppointment.id, formData.status);
+        }
         await appointmentService.updateAppointment(selectedAppointment.id, dataToSubmit);
+        
+        setAppointments(prevAppointments =>
+          prevAppointments.map(apt =>
+            apt.id === selectedAppointment.id
+              ? { ...apt, ...dataToSubmit }
+              : apt
+          )
+        );
       } else {
-        await appointmentService.createAppointment(dataToSubmit);
+        const newAppointment = await appointmentService.createAppointment(dataToSubmit);
+        setAppointments(prevAppointments => [...prevAppointments, newAppointment]);
       }
 
       handleCloseDialog();
@@ -287,8 +298,10 @@ const AppointmentManagement = () => {
 
   const handleStatusChange = async (id, newStatus) => {
     try {
+      setLoading(true);
       await appointmentService.updateAppointmentStatus(id, newStatus);
-      // Update local state immediately
+      
+      // Cập nhật state ngay lập tức
       setAppointments(prevAppointments =>
         prevAppointments.map(apt =>
           apt.id === id
@@ -296,11 +309,13 @@ const AppointmentManagement = () => {
             : apt
         )
       );
-      // Refresh appointments to ensure consistency
-      await fetchAppointments();
+      
+      setError(null);
     } catch (err) {
-      setError('Failed to update appointment status');
+      setError('Không thể cập nhật trạng thái lịch hẹn');
       console.error('Error updating appointment status:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -332,10 +347,29 @@ const AppointmentManagement = () => {
         return 'info';
       case 'completed':
         return 'success';
+      case 'cancelled':
+        return 'default';
       case 'rejected':
         return 'error';
       default:
         return 'default';
+    }
+  };
+
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'pending':
+        return 'Chờ xác nhận';
+      case 'accepted':
+        return 'Đã chấp nhận';
+      case 'completed':
+        return 'Đã hoàn thành';
+      case 'cancelled':
+        return 'Đã hủy';
+      case 'rejected':
+        return 'Từ chối';
+      default:
+        return status;
     }
   };
 
@@ -611,6 +645,15 @@ const AppointmentManagement = () => {
     }
   };
 
+  // Thêm hàm mới để xử lý thay đổi trạng thái trong form
+  const handleFormStatusChange = (e) => {
+    const newStatus = e.target.value;
+    setFormData(prev => ({
+      ...prev,
+      status: newStatus
+    }));
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
@@ -623,7 +666,7 @@ const AppointmentManagement = () => {
     <Container maxWidth="lg">
       <Box mb={4}>
         <Typography variant="h4" component="h1" gutterBottom>
-          Appointment Management
+          Quản lí lịch hẹn
         </Typography>
         <Button
           variant="contained"
@@ -631,7 +674,7 @@ const AppointmentManagement = () => {
           startIcon={<AddIcon />}
           onClick={() => handleOpenDialog()}
         >
-          New Appointment
+          Tạo lịch hẹn mới
         </Button>
       </Box>
 
@@ -645,12 +688,12 @@ const AppointmentManagement = () => {
         <Table sx={{ minWidth: 1000 }}>
           <TableHead>
             <TableRow>
-              <TableCell width="25%" sx={{ fontWeight: 600, backgroundColor: 'grey.50' }}>Patient/Guest</TableCell>
-              <TableCell width="20%" sx={{ fontWeight: 600, backgroundColor: 'grey.50' }}>Doctor</TableCell>
-              <TableCell width="15%" sx={{ fontWeight: 600, backgroundColor: 'grey.50' }}>Date</TableCell>
-              <TableCell width="10%" sx={{ fontWeight: 600, backgroundColor: 'grey.50' }}>Time</TableCell>
-              <TableCell width="15%" sx={{ fontWeight: 600, backgroundColor: 'grey.50' }}>Status</TableCell>
-              <TableCell width="15%" sx={{ fontWeight: 600, backgroundColor: 'grey.50' }}>Actions</TableCell>
+              <TableCell width="25%" sx={{ fontWeight: 600, backgroundColor: 'grey.50' }}>Bệnh nhân/Khách hàng</TableCell>
+              <TableCell width="20%" sx={{ fontWeight: 600, backgroundColor: 'grey.50' }}>Bác sĩ</TableCell>
+              <TableCell width="15%" sx={{ fontWeight: 600, backgroundColor: 'grey.50' }}>Ngày</TableCell>
+              <TableCell width="10%" sx={{ fontWeight: 600, backgroundColor: 'grey.50' }}>Thời gian</TableCell>
+              <TableCell width="15%" sx={{ fontWeight: 600, backgroundColor: 'grey.50' }}>Trạng thái</TableCell>
+              <TableCell width="15%" sx={{ fontWeight: 600, backgroundColor: 'grey.50' }}>Thao tác</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -671,7 +714,7 @@ const AppointmentManagement = () => {
                 <TableCell width="10%">{getAppointmentTime(appointment)}</TableCell>
                 <TableCell width="15%">
                   <Chip
-                    label={appointment.status}
+                    label={getStatusText(appointment.status)}
                     color={getStatusColor(appointment.status)}
                     size="small"
                   />
@@ -698,7 +741,7 @@ const AppointmentManagement = () => {
 
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>
-          {selectedAppointment ? 'Edit Appointment' : 'New Appointment'}
+          {selectedAppointment ? 'Chỉnh sửa lịch hẹn' : 'New Appointment'}
         </DialogTitle>
         <DialogContent>
           {!selectedAppointment && (
@@ -719,16 +762,16 @@ const AppointmentManagement = () => {
                 fullWidth
                 margin="normal"
                 name="status"
-                label="Status"
+                label="Trạng thái"
                 value={formData.status}
-                onChange={handleInputChange}
+                onChange={handleFormStatusChange}
                 required
               >
-                <MenuItem value="pending">Pending</MenuItem>
-                <MenuItem value="accepted">Accepted</MenuItem>
-                <MenuItem value="completed">Completed</MenuItem>
-                <MenuItem value="cancelled">Cancelled</MenuItem>
-                <MenuItem value="rejected">Rejected</MenuItem>
+                <MenuItem value="pending">Chờ xác nhận</MenuItem>
+                <MenuItem value="accepted">Đã chấp nhận</MenuItem>
+                <MenuItem value="completed">Đã hoàn thành</MenuItem>
+                <MenuItem value="cancelled">Đã hủy</MenuItem>
+                <MenuItem value="rejected">Từ chối</MenuItem>
               </TextField>
             )}
           </form>
