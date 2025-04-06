@@ -1,23 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { Cancel as CancelIcon, Edit as EditIcon, Save as SaveIcon } from '@mui/icons-material';
 import {
-  Box,
-  Container,
-  Grid,
-  Paper,
-  Typography,
-  TextField,
-  IconButton,
   Alert,
-  Snackbar,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  Container,
   Divider,
   FormControl,
+  Grid,
   InputLabel,
-  Select,
   MenuItem,
-  Button,
-  CircularProgress,
-  Tabs,
+  Paper,
+  Select,
+  Snackbar,
   Tab,
   Table,
   TableBody,
@@ -25,14 +21,24 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Chip
+  Tabs,
+  TextField,
+  Typography
 } from '@mui/material';
-import { Edit as EditIcon, Save as SaveIcon, Cancel as CancelIcon } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import patientService from '../../services/patientService';
-import medicalRecordService from '../../services/medicalRecordService';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import appointmentService from '../../services/appointmentService';
+import medicalRecordService from '../../services/medicalRecordService';
+import patientService from '../../services/patientService';
+
+// Hàm chuyển đổi chuỗi ISO sang ngày địa phương dạng yyyy-mm-dd
+const getLocalDate = (dateStr) => {
+  const date = new Date(dateStr);
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  return date.toISOString().split('T')[0];
+}
 
 // TabPanel component
 function TabPanel(props) {
@@ -188,17 +194,22 @@ const PatientProfile = () => {
   const handleSave = async () => {
     try {
       setLoading(true);
+      const updatedPatient = {
+        ...editedPatient,
+        date_of_birth: getLocalDate(editedPatient.date_of_birth)
+      };
+
       await patientService.updatePatient(id, {
-        date_of_birth: editedPatient.date_of_birth,
-        gender: editedPatient.gender,
-        blood_group: editedPatient.blood_group,
-        address: editedPatient.address,
-        phone: editedPatient.phone,
-        medical_history: editedPatient.medical_history,
-        allergies: editedPatient.allergies,
-        current_medications: editedPatient.current_medications
+        date_of_birth: updatedPatient.date_of_birth,
+        gender: updatedPatient.gender,
+        blood_group: updatedPatient.blood_group,
+        address: updatedPatient.address,
+        phone: updatedPatient.phone,
+        medical_history: updatedPatient.medical_history,
+        allergies: updatedPatient.allergies,
+        current_medications: updatedPatient.current_medications
       });
-      setPatient(editedPatient);
+      setPatient(updatedPatient);
       setIsEditing(false);
       setAlert({
         open: true,
@@ -336,16 +347,20 @@ const PatientProfile = () => {
                   />
                 </Grid>
                 <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Ngày sinh"
-                    type="date"
-                    value={isEditing ? editedPatient.date_of_birth : patient.date_of_birth}
-                    onChange={handleChange('date_of_birth')}
-                    disabled={!isEditing}
-                    InputLabelProps={{ shrink: true }}
-                    sx={{ bgcolor: 'background.paper' }}
-                  />
+                <TextField
+                  fullWidth
+                  label="Ngày sinh"
+                  type={isEditing ? "date" : "text"}
+                  value={
+                    isEditing
+                      ? (editedPatient.date_of_birth ? getLocalDate(editedPatient.date_of_birth) : '')
+                      : (patient.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString('vi-VN') : '')
+                  }
+                  onChange={handleChange('date_of_birth')}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{ bgcolor: 'background.paper' }}
+                  disabled={!isEditing}
+                />
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <FormControl fullWidth sx={{ bgcolor: 'background.paper' }}>
@@ -568,4 +583,4 @@ const PatientProfile = () => {
   );
 };
 
-export default PatientProfile; 
+export default PatientProfile;
