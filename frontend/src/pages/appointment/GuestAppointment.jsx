@@ -191,210 +191,228 @@ const GuestAppointment = () => {
   }
 
   return (
-    <Container maxWidth="md" sx={{ py: 8 }}>
-      <Box sx={{ mb: 4, textAlign: 'center' }}>
-        <Typography variant="h3" component="h1" gutterBottom>
-          Đặt Lịch Khám
-        </Typography>
-        <Typography color="text.secondary">
-          Điền thông tin của bạn để đặt lịch khám. Chúng tôi sẽ liên hệ xác nhận trong thời gian sớm nhất.
-        </Typography>
-      </Box>
+    <Container maxWidth="lg" className="py-12">
+      <Grid container spacing={4} alignItems="stretch">
+        <Grid item xs={12} md={6}>
+          <Box className="mb-6 text-center">
+            <Typography variant="h3" component="h1" className="font-bold text-3xl md:text-4xl mb-2">
+              Đặt Lịch Khám
+            </Typography>
+            <Typography className="text-gray-600">
+              Điền thông tin của bạn để đặt lịch khám. Chúng tôi sẽ liên hệ xác nhận trong thời gian sớm nhất.
+            </Typography>
+          </Box>
 
-      <Card>
-        <CardContent>
-          {submitSuccess ? (
-            <Box sx={{ textAlign: 'center', py: 4 }}>
-              <Typography variant="h5" gutterBottom>
-                Đặt lịch thành công!
-              </Typography>
-              <Typography variant="body1" paragraph>
-                Mã theo dõi của bạn là: <strong>{trackingCode}</strong>
-              </Typography>
-              <Typography variant="body2" color="text.secondary" paragraph>
-                Vui lòng lưu lại mã này để tra cứu lịch hẹn của bạn.
-              </Typography>
-              <Box sx={{ mt: 3 }}>
-                <Button
-                  variant="contained"
-                  onClick={() => navigate('/track-appointment')}
-                  sx={{ mr: 2 }}
-                >
-                  Tra cứu lịch hẹn
-                </Button>
-                <Button
-                  variant="outlined"
-                  onClick={() => {
-                    setSubmitSuccess(false);
-                    setFormData({
-                      name: '',
-                      phone: '',
-                      email: '',
-                      symptoms: '',
-                      preferredDate: format(new Date(), 'yyyy-MM-dd'),
-                      preferredTime: '09:00',
-                      specialization: '',
-                      doctor_id: ''
-                    });
-                  }}
-                >
-                  Đặt lịch mới
-                </Button>
-              </Box>
-            </Box>
-          ) : (
-            <form onSubmit={handleSubmit}>
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Họ và tên"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    error={!!errors.name}
-                    helperText={errors.name}
-                    required
-                  />
-                </Grid>
-                
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Số điện thoại"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    error={!!errors.phone}
-                    helperText={errors.phone}
-                    required
-                  />
-                </Grid>
-                
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    error={!!errors.email}
-                    helperText={errors.email}
-                  />
-                </Grid>
-                
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Triệu chứng/Lý do khám"
-                    name="symptoms"
-                    multiline
-                    rows={4}
-                    value={formData.symptoms}
-                    onChange={handleChange}
-                    error={!!errors.symptoms}
-                    helperText={errors.symptoms}
-                    required
-                  />
-                </Grid>
-                
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Ngày khám mong muốn"
-                    type="date"
-                    name="preferredDate"
-                    value={formData.preferredDate}
-                    onChange={handleChange}
-                    required
-                    InputLabelProps={{
-                      shrink: true,
-                    }}
-                  />
-                </Grid>
-                
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Giờ khám mong muốn"
-                    type="time"
-                    name="preferredTime"
-                    value={formData.preferredTime}
-                    onChange={handleChange}
-                    required
-                    InputLabelProps={{
-                      shrink: true,
-                    }}
-                    inputProps={{
-                      step: 300 // 5 minutes
-                    }}
-                  />
-                </Grid>
-                
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    select
-                    label="Chuyên khoa"
-                    name="specialization"
-                    value={formData.specialization}
-                    onChange={handleChange}
-                    error={!!errors.specialization}
-                    helperText={errors.specialization}
-                    required
-                  >
-                    {specializations.map((spec) => (
-                      <MenuItem key={spec} value={spec}>
-                        {spec}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    select
-                    label="Bác sĩ"
-                    name="doctor_id"
-                    value={formData.doctor_id}
-                    onChange={handleChange}
-                    disabled={!formData.specialization}
-                  >
-                    <MenuItem value="">
-                      <em>Chọn bác sĩ (không bắt buộc)</em>
-                    </MenuItem>
-                    {doctors.map((doctor) => (
-                      <MenuItem key={doctor.id} value={doctor.id}>
-                        {doctor.name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-                
-                <Grid item xs={12}>
-                  <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+          <Card className="h-full shadow-lg rounded-xl">
+            <CardContent>
+              {submitSuccess ? (
+                <Box className="text-center py-6">
+                  <Typography variant="h5" className="font-semibold mb-4">
+                    Đặt lịch thành công!
+                  </Typography>
+                  <Typography variant="body1" className="mb-2">
+                    Mã theo dõi của bạn là: <strong>{trackingCode}</strong>
+                  </Typography>
+                  <Typography variant="body2" className="text-gray-600 mb-6">
+                    Vui lòng lưu lại mã này để tra cứu lịch hẹn của bạn.
+                  </Typography>
+                  <Box className="flex justify-center gap-4">
+                    <Button
+                      variant="contained"
+                      onClick={() => navigate('/track-appointment')}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      Tra cứu lịch hẹn
+                    </Button>
                     <Button
                       variant="outlined"
-                      onClick={() => navigate('/')}
+                      onClick={() => {
+                        setSubmitSuccess(false);
+                        setFormData({
+                          name: '',
+                          phone: '',
+                          email: '',
+                          symptoms: '',
+                          preferredDate: format(new Date(), 'yyyy-MM-dd'),
+                          preferredTime: '09:00',
+                          specialization: '',
+                          doctor_id: ''
+                        });
+                      }}
+                      className="border-blue-600 text-blue-600 hover:bg-blue-50"
                     >
-                      Hủy
-                    </Button>
-                    <Button
-                      type="submit"
-                      variant="contained"
-                      disabled={loading}
-                    >
-                      {loading ? 'Đang xử lý...' : 'Đặt lịch'}
+                      Đặt lịch mới
                     </Button>
                   </Box>
-                </Grid>
-              </Grid>
-            </form>
-          )}
-        </CardContent>
-      </Card>
+                </Box>
+              ) : (
+                <form onSubmit={handleSubmit}>
+                  <Grid container spacing={3}>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="Họ và tên"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        error={!!errors.name}
+                        helperText={errors.name}
+                        required
+                        className="rounded-lg"
+                      />
+                    </Grid>
+                    
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="Số điện thoại"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleChange}
+                        error={!!errors.phone}
+                        helperText={errors.phone}
+                        required
+                        className="rounded-lg"
+                      />
+                    </Grid>
+                    
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label="Email"
+                        name="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        error={!!errors.email}
+                        helperText={errors.email}
+                        className="rounded-lg"
+                      />
+                    </Grid>
+                    
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label="Triệu chứng/Lý do khám"
+                        name="symptoms"
+                        multiline
+                        rows={4}
+                        value={formData.symptoms}
+                        onChange={handleChange}
+                        error={!!errors.symptoms}
+                        helperText={errors.symptoms}
+                        required
+                        className="rounded-lg"
+                      />
+                    </Grid>
+                    
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="Ngày khám mong muốn"
+                        type="date"
+                        name="preferredDate"
+                        value={formData.preferredDate}
+                        onChange={handleChange}
+                        required
+                        InputLabelProps={{ shrink: true }}
+                        className="rounded-lg"
+                      />
+                    </Grid>
+                    
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="Giờ khám mong muốn"
+                        type="time"
+                        name="preferredTime"
+                        value={formData.preferredTime}
+                        onChange={handleChange}
+                        required
+                        InputLabelProps={{ shrink: true }}
+                        inputProps={{ step: 300 }}
+                        className="rounded-lg"
+                      />
+                    </Grid>
+                    
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        select
+                        label="Chuyên khoa"
+                        name="specialization"
+                        value={formData.specialization}
+                        onChange={handleChange}
+                        error={!!errors.specialization}
+                        helperText={errors.specialization}
+                        required
+                        className="rounded-lg"
+                      >
+                        {specializations.map((spec) => (
+                          <MenuItem key={spec} value={spec}>
+                            {spec}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    </Grid>
+
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        select
+                        label="Bác sĩ"
+                        name="doctor_id"
+                        value={formData.doctor_id}
+                        onChange={handleChange}
+                        disabled={!formData.specialization}
+                        className="rounded-lg"
+                      >
+                        <MenuItem value="">
+                          <em>Chọn bác sĩ (không bắt buộc)</em>
+                        </MenuItem>
+                        {doctors.map((doctor) => (
+                          <MenuItem key={doctor.id} value={doctor.id}>
+                            {doctor.name}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    </Grid>
+                    
+                    <Grid item xs={12}>
+                      <Box className="flex justify-end gap-4">
+                        <Button
+                          variant="outlined"
+                          onClick={() => navigate('/')}
+                          className="border-blue-600 text-blue-600 hover:bg-blue-50 rounded-lg"
+                        >
+                          Hủy
+                        </Button>
+                        <Button
+                          type="submit"
+                          variant="contained"
+                          disabled={loading}
+                          className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                        >
+                          {loading ? 'Đang xử lý...' : 'Đặt lịch'}
+                        </Button>
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </form>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} md={6} className="flex items-center">
+          <img
+            src="/images/appointment-image.jpg"
+            alt="Medical Appointment"
+            className="w-full h-full object-cover rounded-xl shadow-lg"
+            style={{ maxHeight: '100%' }}
+          />
+        </Grid>
+      </Grid>
 
       <Snackbar
         open={snackbar.open}
@@ -404,7 +422,7 @@ const GuestAppointment = () => {
         <Alert
           onClose={handleCloseSnackbar}
           severity={snackbar.severity}
-          sx={{ width: '100%' }}
+          className="w-full"
         >
           {snackbar.message}
         </Alert>
@@ -413,4 +431,4 @@ const GuestAppointment = () => {
   );
 };
 
-export default GuestAppointment; 
+export default GuestAppointment;
