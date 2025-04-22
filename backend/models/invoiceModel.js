@@ -421,7 +421,7 @@ class Invoice {
             // Update medicine stock
             await connection.query(
               'UPDATE medicines SET unit_in_stock = unit_in_stock - ? WHERE id = ?',
-              [item.quantity, item.item_id]
+              [item.quantity, item.id]
             );
           }
 
@@ -462,9 +462,9 @@ class Invoice {
           discount_percent = ?,
           discount_amount = ?,
           payment_method = ?,
-             payment_status = ?,
+          payment_status = ?,
           paid_amount = ?,
-          payment_date = ?,
+          payment_date = NULL,
           notes = ?,
           updated_at = NOW()
          WHERE id = ?`,
@@ -475,9 +475,8 @@ class Invoice {
           discount_percent || currentInvoice[0].discount_percent,
           newDiscountAmount,
           payment_method || currentInvoice[0].payment_method,
-          payment_status || currentInvoice[0].payment_status,
+          'pending', // Luôn cập nhật trạng thái về pending khi chỉnh sửa
           paid_amount || currentInvoice[0].paid_amount,
-          payment_status === 'paid' ? new Date() : null,
           notes || currentInvoice[0].notes,
           id
         ]

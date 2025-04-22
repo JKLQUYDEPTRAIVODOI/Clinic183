@@ -72,7 +72,6 @@ const InvoiceManagement = () => {
     payment_method: '',
     paid_amount: 0,
     notes: '',
-    status: 'pending',
     items: [{ 
       type: '', 
       id: null, 
@@ -88,6 +87,7 @@ const InvoiceManagement = () => {
     pages: 0
   });
   const [appointments, setAppointments] = useState([]);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
 
   useEffect(() => {
     // Kiểm tra quyền
@@ -192,44 +192,41 @@ const InvoiceManagement = () => {
       
       // Format items for the form
       const formattedItems = invoice.items.map(item => {
-        // Tìm dịch vụ tương ứng nếu có
-        const matchedService = services.find(service => 
-          service.name.toLowerCase() === item.name.toLowerCase() &&
-          service.price === item.price
-        );
-        
-        // Tìm thuốc tương ứng nếu có
-        const matchedMedicine = medicines.find(medicine => 
-          medicine.name.toLowerCase() === item.name.toLowerCase() &&
-          medicine.price === item.price
-        );
-        
-        return {
-          type: item.type || '',
-          id: item.id,
-          quantity: item.quantity || 1,
-          discount_amount: item.discount_amount || 0,
-          unit_price: item.unit_price || 0
+        let itemData = {
+          type: item.item_type,
+          id: item.item_id,
+          quantity: item.quantity,
+          discount_amount: item.discount_amount,
+          unit_price: item.unit_price_at_time,
+          name: item.name
         };
-      });
-      
-      setFormData({
-        appointmentId: invoice.appointment_id.toString(),
-        tax_percent: invoice.tax_percent || 10,
-        discount_percent: invoice.discount_percent || 0,
-        payment_method: invoice.payment_method || '',
-        paid_amount: invoice.paid_amount || 0,
-        notes: invoice.notes || '',
-        status: invoice.payment_status || 'pending',
-        items: formattedItems.length > 0 ? formattedItems : [{ type: '', id: null, quantity: 1, discount_amount: 0, unit_price: 0 }],
+
+        return itemData;
       });
 
-      // Find patient in list
-      const patient = patients.find(p => p.id === invoice.patient_id);
-      setSelectedPatient(patient || null);
+      // Cập nhật form data với đầy đủ thông tin
+      setFormData({
+        appointmentId: invoice.appointment_id.toString(),
+        tax_percent: invoice.tax_percent,
+        discount_percent: invoice.discount_percent,
+        payment_method: invoice.payment_method,
+        paid_amount: invoice.paid_amount,
+        notes: invoice.notes || '',
+        items: formattedItems,
+        total_amount: invoice.total_amount,
+        subtotal: invoice.subtotal,
+        tax_amount: invoice.tax_amount,
+        discount_amount: invoice.discount_amount
+      });
+
+      // Cập nhật selected appointment nếu cần
+      const appointment = appointments.find(app => app.id === invoice.appointment_id);
+      if (appointment) {
+        setSelectedAppointment(appointment);
+      }
     } else {
       setSelectedInvoice(null);
-      setSelectedPatient(null);
+      setSelectedAppointment(null);
       setFormData({
         appointmentId: '',
         tax_percent: 10,
@@ -237,8 +234,11 @@ const InvoiceManagement = () => {
         payment_method: '',
         paid_amount: 0,
         notes: '',
-        status: 'pending',
         items: [{ type: '', id: null, quantity: 1, discount_amount: 0, unit_price: 0 }],
+        total_amount: 0,
+        subtotal: 0,
+        tax_amount: 0,
+        discount_amount: 0
       });
     }
     setOpen(true);
@@ -405,17 +405,18 @@ const InvoiceManagement = () => {
 
       const invoiceData = {
         appointment_id: parseInt(formData.appointmentId),
-        tax_percent: parseInt(formData.tax_percent),
-        discount_percent: parseInt(formData.discount_percent),
+        tax_percent: parseFloat(formData.tax_percent),
+        discount_percent: parseFloat(formData.discount_percent),
         payment_method: formData.payment_method,
-        paid_amount: parseInt(formData.paid_amount),
+        paid_amount: parseFloat(formData.paid_amount),
         notes: formData.notes,
         items: formData.items.map(item => ({
           type: item.type,
-          id: item.id,
-          quantity: item.quantity,
-          discount_amount: item.discount_amount || 0
+          id: parseInt(item.id),
+          quantity: parseInt(item.quantity),
+          discount_amount: parseFloat(item.discount_amount)
         })),
+        payment_status: 'pending'
       };
 
       console.log('Sending invoice data:', invoiceData); // Debug log
@@ -519,14 +520,8 @@ const InvoiceManagement = () => {
       setFormData(prev => ({
         ...prev,
         appointmentId: appointmentId.toString(),
-        patientId: appointment.patient_id.toString(),
-        patientName: appointment.patient_name,
         items: [{ type: '', id: null, quantity: 1, discount_amount: 0, unit_price: 0 }]
       }));
-      
-      // Find and set selected patient
-      const patient = patients.find(p => p.id === appointment.patient_id);
-      setSelectedPatient(patient || null);
     }
   };
 
@@ -659,69 +654,11 @@ const InvoiceManagement = () => {
       {/* Edit Invoice Dialog */}
       <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
         <DialogTitle>
-          {selectedInvoice ? 'Chỉnh sửa Hóa đơn' : 'Tạo Hóa đơn mới'}
+          {selectedInvoice ? 'Chỉnh sửa hóa đơn' : 'Tạo hóa đơn mới'}
         </DialogTitle>
         <form onSubmit={handleSubmit}>
           <DialogContent>
             <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <Autocomplete
-                  options={patients}
-                  loading={patientLoading}
-                  getOptionLabel={(option) => `${option.name} - ${option.phone || 'Không có SĐT'}`}
-                  value={selectedPatient}
-                  onChange={handlePatientChange}
-                  isOptionEqualToValue={(option, value) => option.id === value.id}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      fullWidth
-                      label="Chọn bệnh nhân"
-                      margin="normal"
-                      required
-                      InputProps={{
-                        ...params.InputProps,
-                        endAdornment: (
-                          <>
-                            {patientLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                            {params.InputProps.endAdornment}
-                          </>
-                        ),
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Ngày tạo hóa đơn"
-                  name="invoiceDate"
-                  type="date"
-                  value={formData.invoiceDate}
-                  onChange={handleInputChange}
-                  margin="normal"
-                  InputLabelProps={{ shrink: true }}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth margin="normal">
-                  <InputLabel>Trạng thái</InputLabel>
-                  <Select
-                    name="status"
-                    value={formData.status}
-                    onChange={handleInputChange}
-                    required
-                  >
-                    <MenuItem value="pending">Chờ thanh toán</MenuItem>
-                    <MenuItem value="paid">Đã thanh toán</MenuItem>
-                    <MenuItem value="cancelled">Đã hủy</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              
               {!selectedInvoice && (
                 <Grid item xs={12}>
                   <FormControl fullWidth sx={{ mb: 2 }}>
@@ -861,7 +798,7 @@ const InvoiceManagement = () => {
                               options={services}
                               loading={servicesLoading}
                               getOptionLabel={(option) => `${option.name} - ${formatCurrency(option.price)}`}
-                              value={item.id ? findServiceById(item.id) : null}
+                              value={services.find(s => s.id === item.id) || null}
                               onChange={(event, newValue) => handleServiceChange(index, newValue)}
                               isOptionEqualToValue={(option, value) => option.id === value.id}
                               renderInput={(params) => (
@@ -887,7 +824,7 @@ const InvoiceManagement = () => {
                               options={medicines}
                               loading={medicinesLoading}
                               getOptionLabel={(option) => `${option.name} - ${formatCurrency(option.price)}`}
-                              value={item.id ? findMedicineById(item.id) : null}
+                              value={medicines.find(m => m.id === item.id) || null}
                               onChange={(event, newValue) => handleMedicineChange(index, newValue)}
                               isOptionEqualToValue={(option, value) => option.id === value.id}
                               renderInput={(params) => (
@@ -908,6 +845,7 @@ const InvoiceManagement = () => {
                               )}
                             />
                           )}
+                          
                         </Grid>
 
                         <Grid item xs={12} md={2}>

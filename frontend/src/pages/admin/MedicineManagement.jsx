@@ -295,7 +295,6 @@ const MedicineManagement = () => {
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>ID</TableCell>
                     <TableCell>Tên thuốc</TableCell>
                     <TableCell>Mô tả</TableCell>
                     <TableCell>Đơn vị</TableCell>
@@ -308,7 +307,6 @@ const MedicineManagement = () => {
                   {medicines.length > 0 ? (
                     medicines.map((medicine) => (
                       <TableRow key={medicine.id}>
-                        <TableCell>{medicine.id}</TableCell>
                         <TableCell>{medicine.name}</TableCell>
                         <TableCell>{medicine.description}</TableCell>
                         <TableCell>{medicine.unit}</TableCell>

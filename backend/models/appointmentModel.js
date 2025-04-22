@@ -17,12 +17,14 @@ class Appointment {
         a.symptoms,
         a.preferred_date,
         a.preferred_time,
-        a.department
+        a.department,
+        CASE WHEN i.id IS NOT NULL THEN true ELSE false END as has_invoice
       FROM appointments a
       LEFT JOIN patients p ON a.patient_id = p.id
       LEFT JOIN users u_patient ON p.user_id = u_patient.id
       LEFT JOIN doctors d ON a.doctor_id = d.id
       LEFT JOIN users u_doctor ON d.user_id = u_doctor.id
+      LEFT JOIN invoices i ON a.id = i.appointment_id
       ORDER BY 
         CASE 
           WHEN a.tracking_code IS NOT NULL THEN a.preferred_date

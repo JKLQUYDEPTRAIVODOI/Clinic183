@@ -260,7 +260,7 @@ const ServiceManagement = () => {
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>ID</TableCell>
+                    {/* <TableCell>ID</TableCell> */}
                     <TableCell>Tên dịch vụ</TableCell>
                     <TableCell>Mô tả</TableCell>
                     <TableCell>Giá</TableCell>
@@ -271,7 +271,7 @@ const ServiceManagement = () => {
                   {services.length > 0 ? (
                     services.map((service) => (
                       <TableRow key={service.id}>
-                        <TableCell>{service.id}</TableCell>
+                        {/* <TableCell>{service.id}</TableCell> */}
                         <TableCell>{service.name}</TableCell>
                         <TableCell>{service.description || 'Không có mô tả'}</TableCell>
                         <TableCell>{formatCurrency(service.price)}</TableCell>

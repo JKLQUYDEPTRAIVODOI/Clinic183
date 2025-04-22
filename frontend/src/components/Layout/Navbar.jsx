@@ -210,10 +210,12 @@ const Navbar = () => {
                   </Box>
                 </MenuItem>
                 <Divider />
-                <MenuItem onClick={handleProfile}>
-                  <PersonIcon sx={{ mr: 2, color: 'text.secondary' }} />
-                  <Typography>Hồ sơ</Typography>
-                </MenuItem>
+                {user.role !== 'admin' && (
+                  <MenuItem onClick={handleProfile}>
+                    <PersonIcon sx={{ mr: 2, color: 'text.secondary' }} />
+                    <Typography>Hồ sơ</Typography>
+                  </MenuItem>
+                )}
                 {user.role === 'admin' && (
                   <MenuItem onClick={handleSettings}>
                     <SettingsIcon sx={{ mr: 2, color: 'text.secondary' }} />
@@ -233,4 +235,4 @@ const Navbar = () => {
   );
 };
 
-export default Navbar; 
+export default Navbar;

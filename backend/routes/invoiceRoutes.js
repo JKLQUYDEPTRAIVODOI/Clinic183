@@ -15,6 +15,9 @@ router.get('/:id', authenticateToken, authorizeAdmin, invoiceController.getInvoi
 // Create new invoice - Admin only
 router.post('/', authenticateToken, authorizeAdmin, invoiceController.createInvoice);
 
+// Update invoice - Admin only
+router.put('/:id', authenticateToken, authorizeAdmin, invoiceController.updateInvoice);
+
 // Update payment status - Admin only
 router.patch('/:id/status', authenticateToken, authorizeAdmin, invoiceController.updateStatus);
 

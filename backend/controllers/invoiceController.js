@@ -86,6 +86,36 @@ const invoiceController = {
     }
   },
 
+  // Cập nhật hóa đơn
+  updateInvoice: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const invoiceData = req.body;
+
+      const updatedInvoice = await Invoice.update(id, invoiceData);
+
+      if (!updatedInvoice) {
+        return res.status(404).json({
+          success: false,
+          message: 'Không tìm thấy hóa đơn'
+        });
+      }
+
+      res.json({
+        success: true,
+        message: 'Cập nhật hóa đơn thành công',
+        invoice: updatedInvoice
+      });
+    } catch (error) {
+      console.error('Error in updateInvoice:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Lỗi khi cập nhật hóa đơn',
+        error: error.message
+      });
+    }
+  },
+
   // Cập nhật trạng thái thanh toán
   updatePaymentStatus: async (req, res) => {
     try {

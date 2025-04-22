@@ -86,38 +86,41 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen w-screen flex items-stretch justify-center bg-gray-50">
+    <div className="min-h-screen w-screen flex items-stretch justify-center bg-gradient-to-br from-blue-50 to-indigo-50">
       <div className="flex flex-col lg:flex-row items-stretch w-full h-screen">
         {/* Phần bên trái: Form đăng ký */}
-        <div className="w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-6 lg:p-8">
-          <div className="w-full max-w-md">
-            <div className="text-center">
+        <div className="w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-6 lg:p-8 relative">
+          {/* Background pattern */}
+          <div className="absolute inset-0 bg-white/30 backdrop-blur-xl z-0"></div>
+          
+          <div className="w-full max-w-md relative z-10">
+            <div className="text-center mb-8">
               <div className="flex items-center justify-center mb-6">
                 <Button
                   variant="outline"
-                  className="px-4 py-2"
+                  className="px-6 py-2 rounded-full hover:bg-blue-50 transition-all duration-300"
                   onClick={() => navigate('/')}
                 >
                   ← Về trang chủ
                 </Button>
               </div>
-              <h2 className="text-3xl font-extrabold text-gray-900">Đăng ký tài khoản</h2>
-              <p className="mt-2 text-sm text-gray-600">
+              <h2 className="text-4xl font-bold text-gray-900 mb-2">Đăng ký tài khoản</h2>
+              <p className="text-sm text-gray-600">
                 Hoặc{' '}
-                <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
+                <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500 transition-colors duration-300">
                   đăng nhập nếu đã có tài khoản
                 </Link>
               </p>
             </div>
             
-            <Card className="mt-8">
+            <Card className="backdrop-blur-lg bg-white/80 shadow-xl rounded-2xl p-8">
               {errors.general && (
-                <div className="mb-4 bg-red-50 p-4 rounded-md">
+                <div className="mb-6 bg-red-50 p-4 rounded-xl border border-red-100">
                   <p className="text-sm text-red-700">{errors.general}</p>
                 </div>
               )}
               
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit} className="space-y-6">
                 <Input
                   id="name"
                   name="name"
@@ -127,6 +130,7 @@ const Register = () => {
                   onChange={handleChange}
                   error={errors.name}
                   required
+                  className="rounded-xl"
                 />
                 
                 <Input
@@ -138,6 +142,7 @@ const Register = () => {
                   onChange={handleChange}
                   error={errors.email}
                   required
+                  className="rounded-xl"
                 />
                 
                 <Input
@@ -149,6 +154,7 @@ const Register = () => {
                   onChange={handleChange}
                   error={errors.password}
                   required
+                  className="rounded-xl"
                 />
                 
                 <Input
@@ -160,6 +166,7 @@ const Register = () => {
                   onChange={handleChange}
                   error={errors.confirmPassword}
                   required
+                  className="rounded-xl"
                 />
                 
                 <div className="flex items-center mt-4">
@@ -170,8 +177,8 @@ const Register = () => {
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     required
                   />
-                  <label htmlFor="agree-terms" className="ml-2 block text-sm text-gray-900">
-                    Tôi đồng ý với <Link to="/terms" className="text-blue-600 hover:text-blue-500">Điều khoản dịch vụ</Link> và <Link to="/privacy" className="text-blue-600 hover:text-blue-500">Chính sách bảo mật</Link>
+                  <label htmlFor="agree-terms" className="ml-2 block text-sm text-gray-700">
+                    Tôi đồng ý với <Link to="/terms" className="text-blue-600 hover:text-blue-500 transition-colors duration-300">Điều khoản dịch vụ</Link> và <Link to="/privacy" className="text-blue-600 hover:text-blue-500 transition-colors duration-300">Chính sách bảo mật</Link>
                   </label>
                 </div>
                 
@@ -179,7 +186,7 @@ const Register = () => {
                   <Button
                     type="submit"
                     variant="primary"
-                    className="w-full"
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 transform hover:scale-[1.02]"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? 'Đang đăng ký...' : 'Đăng ký'}
@@ -191,12 +198,13 @@ const Register = () => {
         </div>
 
         {/* Phần bên phải: Hình ảnh */}
-        <div className="hidden lg:block w-full lg:w-1/2 h-screen">
+        <div className="hidden lg:block w-full lg:w-1/2 h-screen relative overflow-hidden">
           <img
             src={loginImage}
             alt="Register illustration"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-700"
           />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
         </div>
       </div>
     </div>

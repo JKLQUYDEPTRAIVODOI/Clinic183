@@ -164,10 +164,45 @@ const AppointmentManagement = () => {
     if (appointment) {
       setSelectedAppointment(appointment);
       setCurrentTab(appointment.tracking_code ? 1 : 0);
+      
+      // Format the dates correctly for the form
+      let appointmentDate = '';
+      let preferredDate = '';
+
+      // Format appointment date
+      if (appointment.appointment_date) {
+        try {
+          const date = new Date(appointment.appointment_date);
+          if (!isNaN(date.getTime())) {
+            appointmentDate = format(date, 'yyyy-MM-dd');
+          } else {
+            appointmentDate = appointment.appointment_date;
+          }
+        } catch (error) {
+          console.error('Error formatting appointment date:', error);
+          appointmentDate = appointment.appointment_date;
+        }
+      }
+
+      // Format preferred date
+      if (appointment.preferred_date) {
+        try {
+          const date = new Date(appointment.preferred_date);
+          if (!isNaN(date.getTime())) {
+            preferredDate = format(date, 'yyyy-MM-dd');
+          } else {
+            preferredDate = appointment.preferred_date;
+          }
+        } catch (error) {
+          console.error('Error formatting preferred date:', error);
+          preferredDate = appointment.preferred_date;
+        }
+      }
+
       setFormData({
         patient_id: appointment.patient_id || '',
         doctor_id: appointment.doctor_id || '',
-        appointment_date: formatDateForInput(appointment.appointment_date) || '',
+        appointment_date: appointmentDate,
         appointment_time: formatTimeForInput(appointment.appointment_time) || '',
         reason: appointment.reason || '',
         status: appointment.status || 'pending',
@@ -175,7 +210,7 @@ const AppointmentManagement = () => {
         guest_phone: appointment.guest_phone || '',
         guest_email: appointment.guest_email || '',
         symptoms: appointment.symptoms || '',
-        preferred_date: formatDateForInput(appointment.preferred_date) || '',
+        preferred_date: preferredDate,
         preferred_time: formatTimeForInput(appointment.preferred_time) || '',
         department: appointment.department || ''
       });
@@ -401,17 +436,17 @@ const AppointmentManagement = () => {
 
       if (!dateStr) return 'Chưa xác định';
 
-      // Handle ISO string format
-      if (dateStr.includes('T')) {
-        const date = new Date(dateStr);
-        return date.toLocaleDateString('vi-VN', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric'
-        });
+      // Parse the date string
+      const date = new Date(dateStr);
+      if (!isNaN(date.getTime())) {
+        // Format date as dd/MM/yyyy
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
       }
 
-      // Handle YYYY-MM-DD format
+      // If date string is in YYYY-MM-DD format
       const [year, month, day] = dateStr.split('-');
       if (year && month && day) {
         return `${day}/${month}/${year}`;
@@ -471,7 +506,7 @@ const AppointmentManagement = () => {
             fullWidth
             margin="normal"
             name="patient_id"
-            label="Patient"
+            label="Bệnh nhân"
             value={formData.patient_id}
             onChange={handleInputChange}
             required
@@ -487,7 +522,7 @@ const AppointmentManagement = () => {
             fullWidth
             margin="normal"
             name="doctor_id"
-            label="Doctor"
+            label="Bác sĩ"
             value={formData.doctor_id}
             onChange={handleInputChange}
             required
@@ -502,7 +537,7 @@ const AppointmentManagement = () => {
             fullWidth
             margin="normal"
             name="appointment_date"
-            label="Appointment Date"
+            label="Ngày khám"
             type="date"
             value={formData.appointment_date}
             onChange={handleInputChange}
@@ -515,7 +550,7 @@ const AppointmentManagement = () => {
             fullWidth
             margin="normal"
             name="appointment_time"
-            label="Appointment Time"
+            label="Giờ khám"
             type="time"
             value={formData.appointment_time}
             onChange={handleInputChange}
@@ -528,7 +563,7 @@ const AppointmentManagement = () => {
             fullWidth
             margin="normal"
             name="reason"
-            label="Reason"
+            label="Lý do khám"
             multiline
             rows={3}
             value={formData.reason}
@@ -544,7 +579,7 @@ const AppointmentManagement = () => {
             fullWidth
             margin="normal"
             name="guest_name"
-            label="Guest Name"
+            label="Tên khách"
             value={formData.guest_name}
             onChange={handleInputChange}
             required
@@ -553,7 +588,7 @@ const AppointmentManagement = () => {
             fullWidth
             margin="normal"
             name="guest_phone"
-            label="Phone Number"
+            label="Số điện thoại"
             value={formData.guest_phone}
             onChange={handleInputChange}
             required
@@ -571,7 +606,7 @@ const AppointmentManagement = () => {
             fullWidth
             margin="normal"
             name="symptoms"
-            label="Symptoms"
+            label="Triệu chứng"
             multiline
             rows={3}
             value={formData.symptoms}
@@ -582,34 +617,32 @@ const AppointmentManagement = () => {
             fullWidth
             margin="normal"
             name="preferred_date"
-            label="Preferred Date"
+            label="Ngày mong muốn"
             type="date"
             value={formData.preferred_date}
             onChange={handleInputChange}
             InputLabelProps={{
               shrink: true,
             }}
-            required
           />
           <TextField
             fullWidth
             margin="normal"
             name="preferred_time"
-            label="Preferred Time"
+            label="Giờ mong muốn"
             type="time"
             value={formData.preferred_time}
             onChange={handleInputChange}
             InputLabelProps={{
               shrink: true,
             }}
-            required
           />
           <TextField
+            select
             fullWidth
             margin="normal"
-            select
             name="department"
-            label="Department"
+            label="Khoa"
             value={formData.department}
             onChange={handleInputChange}
             required
@@ -620,26 +653,6 @@ const AppointmentManagement = () => {
               </MenuItem>
             ))}
           </TextField>
-          {formData.department && (
-            <TextField
-              fullWidth
-              margin="normal"
-              select
-              name="doctor_id"
-              label="Doctor (Optional)"
-              value={formData.doctor_id}
-              onChange={handleInputChange}
-            >
-              <MenuItem value="">
-                <em>Select a doctor</em>
-              </MenuItem>
-              {doctorsBySpecialization.map((doctor) => (
-                <MenuItem key={doctor.id} value={doctor.id}>
-                  {doctor.name}
-                </MenuItem>
-              ))}
-            </TextField>
-          )}
         </>
       );
     }
@@ -741,7 +754,7 @@ const AppointmentManagement = () => {
 
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>
-          {selectedAppointment ? 'Chỉnh sửa lịch hẹn' : 'New Appointment'}
+          {selectedAppointment ? 'Chỉnh sửa lịch hẹn' : 'Tạo lịch hẹn mới'}
         </DialogTitle>
         <DialogContent>
           {!selectedAppointment && (
@@ -750,36 +763,48 @@ const AppointmentManagement = () => {
               onChange={(e, newValue) => setCurrentTab(newValue)}
               sx={{ mb: 2 }}
             >
-              <Tab label="Regular Appointment" />
-              <Tab label="Guest Appointment" />
+              <Tab label="Lịch hẹn thông thường" />
+              <Tab label="Lịch hẹn khách vãng lai" />
             </Tabs>
           )}
           <form onSubmit={handleSubmit}>
             {renderForm()}
             {selectedAppointment && (
-              <TextField
-                select
-                fullWidth
-                margin="normal"
-                name="status"
-                label="Trạng thái"
-                value={formData.status}
-                onChange={handleFormStatusChange}
-                required
-              >
-                <MenuItem value="pending">Chờ xác nhận</MenuItem>
-                <MenuItem value="accepted">Đã chấp nhận</MenuItem>
-                <MenuItem value="completed">Đã hoàn thành</MenuItem>
-                <MenuItem value="cancelled">Đã hủy</MenuItem>
-                <MenuItem value="rejected">Từ chối</MenuItem>
-              </TextField>
+              <>
+                <TextField
+                  fullWidth
+                  margin="normal"
+                  label="Ngày đặt lịch"
+                  value={formatDateForInput(selectedAppointment.appointment_date)}
+                  InputProps={{
+                    readOnly: true,
+                  }}
+                  sx={{ mb: 2 }}
+                />
+                <TextField
+                  select
+                  fullWidth
+                  margin="normal"
+                  name="status"
+                  label="Trạng thái"
+                  value={formData.status}
+                  onChange={handleFormStatusChange}
+                  required
+                >
+                  <MenuItem value="pending">Chờ xác nhận</MenuItem>
+                  <MenuItem value="accepted">Đã chấp nhận</MenuItem>
+                  <MenuItem value="completed">Đã hoàn thành</MenuItem>
+                  <MenuItem value="cancelled">Đã hủy</MenuItem>
+                  <MenuItem value="rejected">Từ chối</MenuItem>
+                </TextField>
+              </>
             )}
           </form>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button onClick={handleCloseDialog}>Hủy</Button>
           <Button onClick={handleSubmit} variant="contained" color="primary">
-            Save
+            Lưu
           </Button>
         </DialogActions>
       </Dialog>
