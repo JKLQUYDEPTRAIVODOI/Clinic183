@@ -37,11 +37,14 @@ const AppointmentManagement = () => {
   const [doctorsBySpecialization, setDoctorsBySpecialization] = useState([]);
   const [patients, setPatients] = useState([]);
   const [specializations, setSpecializations] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [currentTab, setCurrentTab] = useState(0); // 0 for regular, 1 for guest
+  const [filterMonth, setFilterMonth] = useState('');
+  const [filterYear, setFilterYear] = useState('');
+  const [searchPatientName, setSearchPatientName] = useState('');
   const [formData, setFormData] = useState({
     patient_id: '',
     doctor_id: '',
@@ -111,12 +114,17 @@ const AppointmentManagement = () => {
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      const data = await appointmentService.getAllAppointments();
-      // Don't format dates here, just set the raw data
-      setAppointments(data);
+      const response = await appointmentService.getAllAppointments();
+      if (Array.isArray(response)) {
+        setAppointments(response);
+      } else {
+        console.error('Invalid response format:', response);
+        setAppointments([]);
+      }
     } catch (err) {
-      setError('Failed to fetch appointments');
       console.error('Error fetching appointments:', err);
+      setError('Failed to fetch appointments');
+      setAppointments([]);
     } finally {
       setLoading(false);
     }
@@ -667,6 +675,27 @@ const AppointmentManagement = () => {
     }));
   };
 
+  const filteredAppointments = appointments.filter(appointment => {
+    // Filter by month and year
+    if (filterMonth && filterYear) {
+      const appointmentDate = new Date(appointment.appointment_date);
+      const appointmentMonth = appointmentDate.getMonth() + 1;
+      const appointmentYear = appointmentDate.getFullYear();
+      
+      if (appointmentMonth !== parseInt(filterMonth) || appointmentYear !== parseInt(filterYear)) {
+        return false;
+      }
+    }
+
+    // Filter by patient name
+    if (searchPatientName) {
+      const patientName = getPatientName(appointment).toLowerCase();
+      return patientName.includes(searchPatientName.toLowerCase());
+    }
+
+    return true;
+  });
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
@@ -681,14 +710,50 @@ const AppointmentManagement = () => {
         <Typography variant="h4" component="h1" gutterBottom>
           Quản lí lịch hẹn
         </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpenDialog()}
-        >
-          Tạo lịch hẹn mới
-        </Button>
+        <Box display="flex" gap={2} mb={2}>
+          <TextField
+            select
+            label="Tháng"
+            value={filterMonth}
+            onChange={(e) => setFilterMonth(e.target.value)}
+            sx={{ minWidth: 120 }}
+          >
+            <MenuItem value="">Tất cả</MenuItem>
+            {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
+              <MenuItem key={month} value={month}>
+                Tháng {month}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            label="Năm"
+            value={filterYear}
+            onChange={(e) => setFilterYear(e.target.value)}
+            sx={{ minWidth: 120 }}
+          >
+            <MenuItem value="">Tất cả</MenuItem>
+            {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(year => (
+              <MenuItem key={year} value={year}>
+                {year}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            label="Tìm kiếm bệnh nhân"
+            value={searchPatientName}
+            onChange={(e) => setSearchPatientName(e.target.value)}
+            sx={{ minWidth: 200 }}
+          />
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={() => handleOpenDialog()}
+          >
+            Tạo lịch hẹn mới
+          </Button>
+        </Box>
       </Box>
 
       {error && (
@@ -710,7 +775,7 @@ const AppointmentManagement = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {appointments.map((appointment) => (
+            {filteredAppointments.map((appointment) => (
               <TableRow key={appointment.id}>
                 <TableCell width="25%">
                   {getPatientName(appointment)}

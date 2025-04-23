@@ -35,16 +35,12 @@ import {
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import doctorService from '../../services/doctorService';
-import patientService from '../../services/patientService';
 
 const DoctorAppointmentsNew = () => {
   // State for appointments list and loading
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  
-  // State for patients data
-  const [patients, setPatients] = useState([]);
   
   // State for detail dialog
   const [detailDialog, setDetailDialog] = useState({
@@ -55,13 +51,14 @@ const DoctorAppointmentsNew = () => {
   // State for filters
   const [filters, setFilters] = useState({
     status: 'all',
-    date: '' // Không set ngày mặc định
+    month: '',
+    year: '',
+    patientName: ''
   });
 
-  // Fetch appointments and patients data
+  // Fetch appointments data
   useEffect(() => {
     fetchAppointments();
-    fetchPatients();
   }, []);
 
   const fetchAppointments = async () => {
@@ -75,15 +72,6 @@ const DoctorAppointmentsNew = () => {
       console.error('Error fetching appointments:', err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchPatients = async () => {
-    try {
-      const data = await patientService.getAllPatients();
-      setPatients(data);
-    } catch (err) {
-      console.error('Error fetching patients:', err);
     }
   };
 
@@ -102,20 +90,42 @@ const DoctorAppointmentsNew = () => {
     }
   };
 
+  const getPatientName = (appointment) => {
+    if (appointment.guest_name) {
+      return `${appointment.guest_name} (Khách)`;
+    }
+    return appointment.patient_name || 'N/A';
+  };
+
   // Filter appointments
   const filteredAppointments = appointments.filter(appointment => {
+    let matchesFilters = true;
+
     // Filter by status
     if (filters.status !== 'all' && appointment.status !== filters.status) {
-      return false;
+      matchesFilters = false;
     }
     
-    // Filter by date only if date is selected
-    if (filters.date && filters.date.trim() !== '') {
-      return appointment.appointment_date === filters.date;
+    // Filter by month and year
+    if (matchesFilters && filters.month && filters.year) {
+      const appointmentDate = new Date(appointment.appointment_date);
+      const appointmentMonth = appointmentDate.getMonth() + 1;
+      const appointmentYear = appointmentDate.getFullYear();
+      
+      if (appointmentMonth !== parseInt(filters.month) || appointmentYear !== parseInt(filters.year)) {
+        matchesFilters = false;
+      }
+    }
+
+    // Filter by patient name
+    if (matchesFilters && filters.patientName) {
+      const patientName = getPatientName(appointment).toLowerCase();
+      if (!patientName.includes(filters.patientName.toLowerCase())) {
+        matchesFilters = false;
+      }
     }
     
-    // If no date filter, show all appointments
-    return true;
+    return matchesFilters;
   });
 
   // Sort appointments by date and time
@@ -162,13 +172,6 @@ const DoctorAppointmentsNew = () => {
   // Format date for display
   const formatDate = (date) => {
     return format(new Date(date), 'dd/MM/yyyy', { locale: vi });
-  };
-
-  const getPatientName = (appointment) => {
-    if (appointment.guest_name) {
-      return `${appointment.guest_name} (Khách)`;
-    }
-    return patients.find(p => p.id === appointment.patient_id)?.name || 'N/A';
   };
 
   const getAppointmentDate = (appointment) => {
@@ -225,6 +228,42 @@ const DoctorAppointmentsNew = () => {
           <Paper sx={{ p: 2, mb: 2 }}>
             <Box display="flex" gap={2} alignItems="center">
               <FormControl size="small" sx={{ minWidth: 200 }}>
+                <InputLabel>Tháng</InputLabel>
+                <Select
+                  value={filters.month}
+                  label="Tháng"
+                  onChange={(e) => setFilters({ ...filters, month: e.target.value })}
+                >
+                  <MenuItem value="">Tất cả</MenuItem>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
+                    <MenuItem key={month} value={month}>
+                      Tháng {month}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl size="small" sx={{ minWidth: 200 }}>
+                <InputLabel>Năm</InputLabel>
+                <Select
+                  value={filters.year}
+                  label="Năm"
+                  onChange={(e) => setFilters({ ...filters, year: e.target.value })}
+                >
+                  <MenuItem value="">Tất cả</MenuItem>
+                  {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                    <MenuItem key={year} value={year}>
+                      {year}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <TextField
+                label="Tìm kiếm bệnh nhân"
+                value={filters.patientName}
+                onChange={(e) => setFilters({ ...filters, patientName: e.target.value })}
+                sx={{ minWidth: 200 }}
+              />
+              <FormControl size="small" sx={{ minWidth: 150 }}>
                 <InputLabel>Trạng thái</InputLabel>
                 <Select
                   value={filters.status}
@@ -238,14 +277,6 @@ const DoctorAppointmentsNew = () => {
                   <MenuItem value="cancelled">Đã hủy</MenuItem>
                 </Select>
               </FormControl>
-              <TextField
-                type="date"
-                size="small"
-                label="Ngày"
-                value={filters.date}
-                onChange={(e) => setFilters({ ...filters, date: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-              />
             </Box>
           </Paper>
         </Grid>
