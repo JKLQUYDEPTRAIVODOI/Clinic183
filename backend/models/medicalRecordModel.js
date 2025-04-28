@@ -161,6 +161,20 @@ class MedicalRecord {
     }
   }
 
+  // Get medical record by appointment ID
+  static async getByAppointmentId(appointmentId) {
+    try {
+      const [records] = await db.query(`
+        SELECT mr.*
+        FROM medical_records mr
+        WHERE mr.appointment_id = ?
+      `, [appointmentId]);
+      return records[0] || null;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   // Create new medical record
   static async create(medicalRecordData) {
     try {

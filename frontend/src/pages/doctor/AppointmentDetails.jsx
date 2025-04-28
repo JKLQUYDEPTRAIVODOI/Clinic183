@@ -131,7 +131,7 @@ const AppointmentDetails = () => {
   const handleUpdateDiagnosis = async () => {
     try {
       setLoading(true);
-      await appointmentService.updateAppointment(id, { diagnosis });
+      await appointmentService.updateDiagnosis(id, diagnosis);
       await fetchAppointmentDetails();
       setUpdateDialog(false);
     } catch (error) {

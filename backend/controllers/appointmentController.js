@@ -4,6 +4,7 @@ const Patient = require('../models/patientModel');
 const { sendAppointmentConfirmation, sendStatusUpdateEmail } = require('../utils/emailService');
 const db = require('../config/db');
 const { v4: uuidv4 } = require('uuid');
+const MedicalRecord = require('../models/medicalRecordModel');
 
 // Get all appointments (admin only)
 exports.getAllAppointments = async (req, res) => {
@@ -357,6 +358,57 @@ exports.updateAppointmentStatus = async (req, res) => {
     });
   } catch (error) {
     console.error('Error updating appointment status:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Update diagnosis for an appointment
+exports.updateDiagnosis = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { diagnosis } = req.body;
+    
+    // Get the appointment
+    const appointment = await Appointment.getById(id);
+    if (!appointment) {
+      return res.status(404).json({ message: 'Appointment not found' });
+    }
+
+    // Authorization check - only doctor can update diagnosis
+    if (req.user.role !== 'doctor' || appointment.doctor_id !== req.doctor?.id) {
+      return res.status(403).json({ message: 'Not authorized to update diagnosis' });
+    }
+
+    // Get medical record for this appointment
+    const medicalRecord = await MedicalRecord.getByAppointmentId(id);
+    
+    if (medicalRecord) {
+      // Update existing medical record
+      const success = await MedicalRecord.update(medicalRecord.id, { diagnosis });
+      if (!success) {
+        return res.status(400).json({ message: 'Failed to update diagnosis' });
+      }
+    } else {
+      // Create new medical record
+      const recordId = await MedicalRecord.create({
+        appointment_id: id,
+        diagnosis,
+        notes: ''
+      });
+      if (!recordId) {
+        return res.status(400).json({ message: 'Failed to create medical record' });
+      }
+    }
+
+    // Get updated appointment with medical record
+    const updatedAppointment = await Appointment.getById(id);
+    
+    res.json({
+      message: 'Diagnosis updated successfully',
+      appointment: updatedAppointment
+    });
+  } catch (error) {
+    console.error('Error updating diagnosis:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

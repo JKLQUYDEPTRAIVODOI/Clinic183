@@ -36,4 +36,7 @@ router.route('/:id')
 
 router.patch('/:id/status', appointmentController.updateAppointmentStatus);
 
+// Add new route for updating diagnosis - only doctors can access this
+router.patch('/:id/diagnosis', authorize('doctor'), appointmentController.updateDiagnosis);
+
 module.exports = router; 

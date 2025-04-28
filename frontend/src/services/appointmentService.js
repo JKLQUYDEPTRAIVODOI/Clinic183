@@ -100,6 +100,17 @@ const appointmentService = {
     }
   },
 
+  // Update diagnosis for an appointment
+  updateDiagnosis: async (id, diagnosis) => {
+    try {
+      const response = await api.patch(`/appointments/${id}/diagnosis`, { diagnosis });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating diagnosis:', error);
+      throw error;
+    }
+  },
+
   // Convert guest appointment to regular appointment (admin only)
   convertGuestToRegular: async (appointmentId, patientId) => {
     try {
