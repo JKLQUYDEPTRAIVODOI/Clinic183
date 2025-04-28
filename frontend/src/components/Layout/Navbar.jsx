@@ -10,6 +10,8 @@ import {
   Avatar,
   Tooltip,
   Divider,
+  Badge,
+  useTheme,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -20,12 +22,14 @@ import {
 } from '@mui/icons-material';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import theme from '../../theme';
 
 const Navbar = () => {
   const { user, isAuthenticated, logout, hasRole } = useAuth();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [anchorElUser, setAnchorElUser] = useState(null);
+  const [notificationsAnchor, setNotificationsAnchor] = useState(null);
 
   const handleLogout = async () => {
     try {
@@ -42,6 +46,14 @@ const Navbar = () => {
 
   const handleCloseUserMenu = () => {
     setAnchorElUser(null);
+  };
+
+  const handleOpenNotifications = (event) => {
+    setNotificationsAnchor(event.currentTarget);
+  };
+
+  const handleCloseNotifications = () => {
+    setNotificationsAnchor(null);
   };
 
   const handleProfile = () => {
@@ -71,34 +83,84 @@ const Navbar = () => {
   };
 
   return (
-    <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+    <AppBar 
+      position="fixed" 
+      sx={{ 
+        zIndex: (theme) => theme.zIndex.drawer + 1,
+        backgroundColor: 'background.paper',
+        borderBottom: '1px solid',
+        borderColor: 'divider',
+      }}
+    >
       <Toolbar>
         <IconButton
           size="large"
           edge="start"
           color="inherit"
           aria-label="menu"
-          sx={{ mr: 2 }}
+          sx={{ 
+            mr: 2,
+            color: 'text.primary',
+            '&:hover': {
+              backgroundColor: 'action.hover',
+            },
+          }}
         >
           <MenuIcon />
         </IconButton>
 
-        <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+        <Typography 
+          variant="h6" 
+          component="div" 
+          sx={{ 
+            flexGrow: 1,
+            color: 'text.primary',
+            fontWeight: 600,
+          }}
+        >
           Clinic HMS
         </Typography>
 
         {user && (
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Tooltip title="Thông báo">
-              <IconButton color="inherit" sx={{ mr: 2 }}>
-                <NotificationsIcon />
+              <IconButton 
+                color="inherit" 
+                onClick={handleOpenNotifications}
+                sx={{ 
+                  color: 'text.primary',
+                  '&:hover': {
+                    backgroundColor: 'action.hover',
+                  },
+                }}
+              >
+                <Badge badgeContent={4} color="error">
+                  <NotificationsIcon />
+                </Badge>
               </IconButton>
             </Tooltip>
 
             <Box sx={{ flexGrow: 0 }}>
               <Tooltip title="Tài khoản">
-                <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
-                  <Avatar alt={user.name} src={user.avatar}>
+                <IconButton 
+                  onClick={handleOpenUserMenu} 
+                  sx={{ 
+                    p: 0,
+                    '&:hover': {
+                      backgroundColor: 'transparent',
+                    },
+                  }}
+                >
+                  <Avatar 
+                    alt={user.name} 
+                    src={user.avatar}
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      border: '2px solid',
+                      borderColor: 'primary.main',
+                    }}
+                  >
                     {user.name ? user.name[0] : <PersonIcon />}
                   </Avatar>
                 </IconButton>
@@ -118,29 +180,51 @@ const Navbar = () => {
                 }}
                 open={Boolean(anchorElUser)}
                 onClose={handleCloseUserMenu}
+                PaperProps={{
+                  sx: {
+                    mt: 1.5,
+                    borderRadius: 2,
+                    boxShadow: theme.shadows[3],
+                  },
+                }}
               >
                 <MenuItem disabled>
-                  <Typography textAlign="center">
-                    {user.name}
-                    <Typography variant="body2" color="text.secondary">
+                  <Box>
+                    <Typography 
+                      variant="subtitle1" 
+                      sx={{ 
+                        fontWeight: 600,
+                        color: 'text.primary',
+                      }}
+                    >
+                      {user.name}
+                    </Typography>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        color: 'text.secondary',
+                      }}
+                    >
                       {getRoleText(user.role)}
                     </Typography>
-                  </Typography>
+                  </Box>
                 </MenuItem>
                 <Divider />
-                <MenuItem onClick={handleProfile}>
-                  <PersonIcon sx={{ mr: 2 }} />
-                  Hồ sơ
-                </MenuItem>
+                {user.role !== 'admin' && (
+                  <MenuItem onClick={handleProfile}>
+                    <PersonIcon sx={{ mr: 2, color: 'text.secondary' }} />
+                    <Typography>Hồ sơ</Typography>
+                  </MenuItem>
+                )}
                 {user.role === 'admin' && (
                   <MenuItem onClick={handleSettings}>
-                    <SettingsIcon sx={{ mr: 2 }} />
-                    Cài đặt
+                    <SettingsIcon sx={{ mr: 2, color: 'text.secondary' }} />
+                    <Typography>Cài đặt</Typography>
                   </MenuItem>
                 )}
                 <MenuItem onClick={handleLogout}>
-                  <LogoutIcon sx={{ mr: 2 }} />
-                  Đăng xuất
+                  <LogoutIcon sx={{ mr: 2, color: 'text.secondary' }} />
+                  <Typography>Đăng xuất</Typography>
                 </MenuItem>
               </Menu>
             </Box>
@@ -151,4 +235,4 @@ const Navbar = () => {
   );
 };
 
-export default Navbar; 
+export default Navbar;

@@ -1,9 +1,13 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation, Outlet } from 'react-router-dom';
-import { useAuth, AuthProvider } from './context/AuthContext';
+// App.jsx
+import { Routes, Route, Navigate, useNavigate, useLocation, Outlet } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
 import { useEffect } from 'react';
 import Layout from './components/Layout/Layout';
 import Button from './components/UI/Button';
-
+import NotFound from './pages/NotFound';
+import LandingPage from './pages/LandingPage';
+import GuestAppointment from './pages/appointment/GuestAppointment';
+import TrackAppointment from './pages/appointment/TrackAppointment';
 // Auth Pages
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
@@ -18,18 +22,26 @@ import PatientManagement from './pages/admin/PatientManagement';
 import AppointmentManagement from './pages/admin/AppointmentManagement';
 import MedicalServicesManagement from './pages/admin/MedicalServicesManagement';
 import MedicineManagement from './pages/admin/MedicineManagement';
-import ReportsAndStatistics from './pages/admin/ReportsAndStatistics';
 import AdminProfile from './pages/admin/Profile';
 import StaffManagement from './pages/admin/StaffManagement';
 import Settings from './pages/admin/Settings';
+import DiagnosisManagement from './pages/admin/DiagnosesManagement';
+import User from './pages/admin/UserManagement';
+import MedicalRecords from './pages/admin/MedicalRecordsManagement';
+import InvoiceManagement from './pages/admin/InvoiceManagement';
+import RevenueManagement from './pages/admin/RevenueManagement';
+import ServiceManagement from './pages/admin/ServiceManagement';
 
 // Doctor Pages
 import DoctorDashboard from './pages/doctor/Dashboard';
 import DoctorProfile from './pages/doctor/Profile';
-import DoctorAppointments from './pages/doctor/Appointments';
+import DoctorAppointmentsNew from './pages/doctor/DoctorAppointmentsNew';
 import PatientRecords from './pages/doctor/PatientRecords';
 import DoctorPrescriptions from './pages/doctor/Prescriptions';
 import Schedule from './pages/doctor/Schedule';
+import DoctorPatientProfile from './pages/doctor/PatientProfile';
+import AppointmentDetails from './pages/doctor/AppointmentDetails';
+import MedicalRecordDetail from './pages/doctor/MedicalRecordDetail';
 
 // Patient Pages
 import PatientDashboard from './pages/patient/Dashboard';
@@ -37,7 +49,7 @@ import PatientProfile from './pages/patient/Profile';
 import PatientAppointments from './pages/patient/Appointments';
 import MedicalHistory from './pages/patient/MedicalHistory';
 import PatientPrescriptions from './pages/patient/Prescriptions';
-import Bills from './pages/patient/Bills';
+import Invoices from './pages/patient/Invoices';
 
 // Protected Route Component
 const ProtectedRoute = ({ allowedRoles }) => {
@@ -45,14 +57,16 @@ const ProtectedRoute = ({ allowedRoles }) => {
   const location = useLocation();
   
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">
-      <div className="text-center">
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Đang tải...</span>
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Đang tải...</span>
+          </div>
+          <div className="mt-2">Đang tải...</div>
         </div>
-        <div className="mt-2">Đang tải...</div>
       </div>
-    </div>;
+    );
   }
   
   if (!isAuthenticated) {
@@ -60,7 +74,7 @@ const ProtectedRoute = ({ allowedRoles }) => {
   }
   
   if (allowedRoles && !allowedRoles.includes(user?.role)) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/home" replace />;
   }
   
   return <Outlet />;
@@ -120,81 +134,71 @@ const HomeDashboard = () => {
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<Layout><HomeDashboard /></Layout>} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/verify-email" element={<VerifyEmail />} />
+    <Routes>
+      {/* Public Routes */}
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/home" element={<HomeDashboard />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/verify-email" element={<VerifyEmail />} />
+      <Route path="/book-appointment" element={<GuestAppointment />} />
+      <Route path="/track-appointment" element={<TrackAppointment />} />
 
-          {/* Protected Routes */}
-          {/* Admin Routes */}
-          <Route element={<Layout><ProtectedRoute allowedRoles={['admin']} /></Layout>}>
-            <Route path="/admin">
-              <Route index element={<AdminDashboard />} />
-              <Route path="profile" element={<AdminProfile />} />
-              <Route path="doctors" element={<DoctorManagement />} />
-              <Route path="patients" element={<PatientManagement />} />
-              <Route path="appointments" element={<AppointmentManagement />} />
-              <Route path="services" element={<MedicalServicesManagement />} />
-              <Route path="medicines" element={<MedicineManagement />} />
-              <Route path="reports" element={<ReportsAndStatistics />} />
-              <Route path="staff" element={<StaffManagement />} />
-              <Route path="settings" element={<Settings />} />
-            </Route>
-          </Route>
+      {/* Protected Routes */}
+      {/* Admin Routes */}
+      <Route element={<Layout><ProtectedRoute allowedRoles={['admin']} /></Layout>}>
+        <Route path="/admin">
+          <Route index element={<AdminDashboard />} />
+          <Route path="profile" element={<AdminProfile />} />
+          <Route path="doctors" element={<DoctorManagement />} />
+          <Route path="patients" element={<PatientManagement />} />
+          <Route path="appointments" element={<AppointmentManagement />} />
+          <Route path="services" element={<ServiceManagement />} />
+          <Route path="medicines" element={<MedicineManagement />} />
+          <Route path="staff" element={<StaffManagement />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="diagnoses" element={<DiagnosisManagement />} />
+          <Route path="users" element={<User />} />
+          <Route path="medical-records" element={<MedicalRecords />} />
+          <Route path="invoices" element={<InvoiceManagement />} />
+          <Route path="revenue" element={<RevenueManagement />} />
+        </Route>
+      </Route>
 
-          {/* Doctor Routes */}
-          <Route element={<Layout><ProtectedRoute allowedRoles={['doctor']} /></Layout>}>
-            <Route path="/doctor">
-              <Route index element={<DoctorDashboard />} />
-              <Route path="profile" element={<DoctorProfile />} />
-              <Route path="appointments" element={<DoctorAppointments />} />
-              <Route path="patients" element={<PatientRecords />} />
-              <Route path="prescriptions" element={<DoctorPrescriptions />} />
-              <Route path="schedule" element={<Schedule />} />
-            </Route>
-          </Route>
+      {/* Doctor Routes */}
+      <Route element={<Layout><ProtectedRoute allowedRoles={['doctor']} /></Layout>}>
+        <Route path="/doctor">
+          <Route index element={<DoctorDashboard />} />
+          <Route path="profile" element={<DoctorProfile />} />
+          <Route path="appointments" element={<DoctorAppointmentsNew />} />
+          <Route path="appointments/:id" element={<AppointmentDetails />} />
+          <Route path="patients" element={<PatientRecords />} />
+          <Route path="prescriptions" element={<DoctorPrescriptions />} />
+          <Route path="schedule" element={<Schedule />} />
+          <Route path="patients/:id" element={<DoctorPatientProfile />} />
+          <Route path="medical-records/:id" element={<MedicalRecordDetail />} />
+        </Route>
+      </Route>
 
-          {/* Patient Routes */}
-          <Route element={<Layout><ProtectedRoute allowedRoles={['patient']} /></Layout>}>
-            <Route path="/patient">
-              <Route index element={<PatientDashboard />} />
-              <Route path="profile" element={<PatientProfile />} />
-              <Route path="appointments" element={<PatientAppointments />} />
-              <Route path="appointments/new" element={<PatientAppointments />} />
-              <Route path="medical-history" element={<MedicalHistory />} />
-              <Route path="prescriptions" element={<PatientPrescriptions />} />
-              <Route path="bills" element={<Bills />} />
-            </Route>
-          </Route>
+      {/* Patient Routes */}
+      <Route element={<Layout><ProtectedRoute allowedRoles={['patient']} /></Layout>}>
+        <Route path="/patient">
+          <Route index element={<PatientDashboard />} />
+          <Route path="profile" element={<PatientProfile />} />
+          <Route path="appointments" element={<PatientAppointments />} />
+          <Route path="appointments/new" element={<PatientAppointments />} />
+          <Route path="medical-history" element={<MedicalHistory />} />
+          <Route path="prescriptions" element={<PatientPrescriptions />} />
+          <Route path="invoices" element={<Invoices />} />
+        </Route>
+      </Route>
 
-          {/* Catch all route - 404 */}
-          <Route path="*" element={
-            <Layout>
-              <div className="text-center py-20">
-                <h1 className="text-4xl font-bold text-gray-800 mb-4">404 - Không tìm thấy trang</h1>
-                <p className="text-lg text-gray-600 mb-8">
-                  Trang bạn đang tìm kiếm không tồn tại.
-                </p>
-                <Button 
-                  variant="primary" 
-                  className="px-6 py-2"
-                  onClick={() => navigate('/')}
-                >
-                  Về trang chủ
-                </Button>
-              </div>
-            </Layout>
-          } />
-        </Routes>
-      </Router>
-    </AuthProvider>
+      {/* Catch all route - 404 */}
+      <Route path="*" element={<NotFound />} />
+    </Routes>
   );
 }
 
-export default App; 
+export default App;

@@ -1,43 +1,103 @@
+import React from 'react';
+import { Button as MuiButton, CircularProgress } from '@mui/material';
+import theme from '../../theme';
+
 const Button = ({ 
   children, 
-  type = 'button', 
-  variant = 'primary', 
-  size = 'md', 
-  className = '', 
+  variant = 'contained', 
+  color = 'primary',
+  size = 'medium',
+  loading = false,
   disabled = false,
-  onClick,
+  className = '',
+  startIcon,
+  endIcon,
   ...props 
 }) => {
-  const baseClass = 'rounded font-medium focus:outline-none transition-colors';
-  
-  const variantClasses = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50',
-    secondary: 'bg-gray-200 text-gray-800 hover:bg-gray-300 focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50',
-    success: 'bg-green-600 text-white hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-opacity-50',
-    danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-opacity-50',
-    outline: 'bg-transparent text-blue-600 border border-blue-600 hover:bg-blue-50 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50'
+  const getVariantStyles = () => {
+    switch (variant) {
+      case 'contained':
+        return {
+          backgroundColor: `${color}.main`,
+          color: `${color}.contrastText`,
+          '&:hover': {
+            backgroundColor: `${color}.dark`,
+          },
+          '&:disabled': {
+            backgroundColor: 'action.disabledBackground',
+            color: 'action.disabled',
+          },
+        };
+      case 'outlined':
+        return {
+          borderColor: `${color}.main`,
+          color: `${color}.main`,
+          '&:hover': {
+            borderColor: `${color}.dark`,
+            backgroundColor: `${color}.light`,
+          },
+          '&:disabled': {
+            borderColor: 'action.disabled',
+            color: 'action.disabled',
+          },
+        };
+      case 'text':
+        return {
+          color: `${color}.main`,
+          '&:hover': {
+            backgroundColor: `${color}.light`,
+          },
+          '&:disabled': {
+            color: 'action.disabled',
+          },
+        };
+      default:
+        return {};
+    }
   };
-  
-  const sizeClasses = {
-    sm: 'text-sm py-1 px-2',
-    md: 'text-base py-2 px-4',
-    lg: 'text-lg py-3 px-6'
+
+  const getSizeStyles = () => {
+    switch (size) {
+      case 'small':
+        return {
+          padding: '4px 12px',
+          fontSize: '0.875rem',
+        };
+      case 'large':
+        return {
+          padding: '8px 24px',
+          fontSize: '1rem',
+        };
+      default:
+        return {
+          padding: '6px 16px',
+          fontSize: '0.875rem',
+        };
+    }
   };
-  
-  const disabledClass = disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer';
-  
-  const buttonClass = `${baseClass} ${variantClasses[variant]} ${sizeClasses[size]} ${disabledClass} ${className}`;
-  
+
   return (
-    <button 
-      type={type} 
-      className={buttonClass} 
-      disabled={disabled} 
-      onClick={onClick}
+    <MuiButton
+      variant={variant}
+      color={color}
+      size={size}
+      disabled={disabled || loading}
+      className={`rounded-lg font-medium transition-all duration-200 ${className}`}
+      sx={{
+        ...getVariantStyles(),
+        ...getSizeStyles(),
+        textTransform: 'none',
+        boxShadow: 'none',
+        '&:hover': {
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+        },
+      }}
+      startIcon={loading ? <CircularProgress size={20} color="inherit" /> : startIcon}
+      endIcon={endIcon}
       {...props}
     >
       {children}
-    </button>
+    </MuiButton>
   );
 };
 

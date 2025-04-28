@@ -6,41 +6,45 @@ import {
   Paper,
   Typography,
   TextField,
-  Button,
-  Avatar,
   IconButton,
-  Divider,
+  Alert,
+  Snackbar,
+  Divider
 } from '@mui/material';
 import { Edit as EditIcon, Save as SaveIcon, Cancel as CancelIcon } from '@mui/icons-material';
+import doctorService from '../../services/doctorService';
+import { format } from 'date-fns';
+import { vi } from 'date-fns/locale';
 
 const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [profile, setProfile] = useState({
-    id: 1,
-    avatar: 'https://example.com/avatar.jpg',
-    fullName: 'Dr. John Doe',
-    email: 'john.doe@example.com',
-    phone: '0123456789',
-    specialization: 'Nội khoa',
-    degree: 'Tiến sĩ Y khoa',
-    experience: '10 năm',
-    certificates: 'Chứng chỉ hành nghề số 123456',
-    biography: 'Tốt nghiệp Đại học Y Hà Nội, có nhiều năm kinh nghiệm trong lĩnh vực Nội khoa...',
-    address: '123 Đường ABC, Quận XYZ, TP. Hồ Chí Minh',
+    name: '',
+    email: '',
+    specialization: '',
+    experience_years: '',
+    bio: '',
+    created_at: null
   });
   const [editedProfile, setEditedProfile] = useState(profile);
+  const [alert, setAlert] = useState({ open: false, message: '', severity: 'success' });
 
   useEffect(() => {
-    // TODO: Fetch doctor profile from API
     fetchProfile();
   }, []);
 
   const fetchProfile = async () => {
     try {
-      // TODO: Implement API call
-      // Using mock data for now
+      const data = await doctorService.getMyProfile();
+      setProfile(data);
+      setEditedProfile(data);
     } catch (error) {
       console.error('Error fetching profile:', error);
+      setAlert({
+        open: true,
+        message: 'Không thể tải thông tin cá nhân',
+        severity: 'error'
+      });
     }
   };
 
@@ -56,11 +60,25 @@ const Profile = () => {
 
   const handleSave = async () => {
     try {
-      // TODO: Implement API call to update profile
+      await doctorService.updateMyProfile({
+        specialization: editedProfile.specialization,
+        experience_years: editedProfile.experience_years,
+        bio: editedProfile.bio
+      });
       setProfile(editedProfile);
       setIsEditing(false);
+      setAlert({
+        open: true,
+        message: 'Cập nhật thông tin thành công',
+        severity: 'success'
+      });
     } catch (error) {
       console.error('Error updating profile:', error);
+      setAlert({
+        open: true,
+        message: 'Không thể cập nhật thông tin',
+        severity: 'error'
+      });
     }
   };
 
@@ -69,6 +87,10 @@ const Profile = () => {
       ...editedProfile,
       [field]: event.target.value,
     });
+  };
+
+  const handleCloseAlert = () => {
+    setAlert({ ...alert, open: false });
   };
 
   return (
@@ -98,33 +120,18 @@ const Profile = () => {
             </Box>
           </Grid>
 
-          {/* Avatar section */}
-          <Grid item xs={12} md={3}>
-            <Box display="flex" flexDirection="column" alignItems="center">
-              <Avatar
-                src={profile.avatar}
-                alt={profile.fullName}
-                sx={{ width: 200, height: 200, mb: 2 }}
-              />
-              {isEditing && (
-                <Button variant="outlined" component="label">
-                  Thay đổi ảnh
-                  <input type="file" hidden accept="image/*" />
-                </Button>
-              )}
-            </Box>
-          </Grid>
-
-          {/* Profile information */}
-          <Grid item xs={12} md={9}>
+          {/* Basic Information */}
+          <Grid item xs={12}>
+            <Typography variant="h6" gutterBottom>
+              Thông tin cơ bản
+            </Typography>
             <Grid container spacing={3}>
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
                   label="Họ và tên"
-                  value={isEditing ? editedProfile.fullName : profile.fullName}
-                  onChange={handleChange('fullName')}
-                  disabled={!isEditing}
+                  value={isEditing ? editedProfile.name : profile.name}
+                  disabled={true}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -132,19 +139,30 @@ const Profile = () => {
                   fullWidth
                   label="Email"
                   value={isEditing ? editedProfile.email : profile.email}
-                  onChange={handleChange('email')}
-                  disabled={!isEditing}
+                  disabled={true}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  label="Số điện thoại"
-                  value={isEditing ? editedProfile.phone : profile.phone}
-                  onChange={handleChange('phone')}
-                  disabled={!isEditing}
+                  label="Ngày tham gia"
+                  value={profile.created_at ? format(new Date(profile.created_at), 'dd/MM/yyyy', { locale: vi }) : ''}
+                  disabled={true}
                 />
               </Grid>
+            </Grid>
+          </Grid>
+
+          <Grid item xs={12}>
+            <Divider />
+          </Grid>
+
+          {/* Professional Information */}
+          <Grid item xs={12}>
+            <Typography variant="h6" gutterBottom>
+              Thông tin chuyên môn
+            </Typography>
+            <Grid container spacing={3}>
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
@@ -152,52 +170,26 @@ const Profile = () => {
                   value={isEditing ? editedProfile.specialization : profile.specialization}
                   onChange={handleChange('specialization')}
                   disabled={!isEditing}
+                  required
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  label="Học vị"
-                  value={isEditing ? editedProfile.degree : profile.degree}
-                  onChange={handleChange('degree')}
+                  label="Số năm kinh nghiệm"
+                  type="number"
+                  value={isEditing ? editedProfile.experience_years : profile.experience_years}
+                  onChange={handleChange('experience_years')}
                   disabled={!isEditing}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Kinh nghiệm"
-                  value={isEditing ? editedProfile.experience : profile.experience}
-                  onChange={handleChange('experience')}
-                  disabled={!isEditing}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Chứng chỉ"
-                  value={isEditing ? editedProfile.certificates : profile.certificates}
-                  onChange={handleChange('certificates')}
-                  disabled={!isEditing}
-                  multiline
-                  rows={2}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Địa chỉ"
-                  value={isEditing ? editedProfile.address : profile.address}
-                  onChange={handleChange('address')}
-                  disabled={!isEditing}
+                  inputProps={{ min: 0 }}
                 />
               </Grid>
               <Grid item xs={12}>
                 <TextField
                   fullWidth
                   label="Tiểu sử"
-                  value={isEditing ? editedProfile.biography : profile.biography}
-                  onChange={handleChange('biography')}
+                  value={isEditing ? editedProfile.bio : profile.bio}
+                  onChange={handleChange('bio')}
                   disabled={!isEditing}
                   multiline
                   rows={4}
@@ -207,6 +199,17 @@ const Profile = () => {
           </Grid>
         </Grid>
       </Paper>
+
+      <Snackbar
+        open={alert.open}
+        autoHideDuration={6000}
+        onClose={handleCloseAlert}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert onClose={handleCloseAlert} severity={alert.severity}>
+          {alert.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };

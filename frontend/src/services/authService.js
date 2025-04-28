@@ -17,6 +17,19 @@ const handleApiError = (error) => {
   }
 };
 
+// Helper function to validate JWT format
+const isValidJWT = (token) => {
+  if (typeof token !== 'string') return false;
+  const parts = token.split('.');
+  if (parts.length !== 3) return false;
+  try {
+    parts.forEach(part => atob(part.replace(/-/g, '+').replace(/_/g, '/')));
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+
 // Set token to Authorization header
 const setAuthToken = (token) => {
   if (token) {
@@ -31,6 +44,12 @@ export const login = async (data) => {
     const response = await api.post('/auth/login', data);
     const { token, user } = response.data;
     
+
+    // Validate token format before storing
+    if (!isValidJWT(token)) {
+      throw new Error('Invalid token format received from server');
+    }
+
     // Store token and user in localStorage
     localStorage.setItem(TOKEN_KEY, token);
     localStorage.setItem(USER_KEY, JSON.stringify(user));
@@ -49,6 +68,11 @@ export const register = async (data) => {
     const response = await api.post('/auth/register', data);
     const { token, user } = response.data;
     
+    // Validate token format before storing
+    if (!isValidJWT(token)) {
+      throw new Error('Invalid token format received from server');
+    }
+
     // Store token and user in localStorage
     localStorage.setItem(TOKEN_KEY, token);
     localStorage.setItem(USER_KEY, JSON.stringify(user));
@@ -82,14 +106,19 @@ export const getCurrentUser = () => {
 };
 
 export const getToken = () => {
-  return localStorage.getItem(TOKEN_KEY);
+  const token = localStorage.getItem(TOKEN_KEY);
+  return isValidJWT(token) ? token : null;
 };
 
 export const verifyToken = async () => {
   try {
     const token = getToken();
-    if (!token) return false;
+    if (!token) {
+      console.log('No token found in localStorage');
+      return false;
+    }
 
+    // Token is automatically added to header by api interceptor
     const response = await api.post('/auth/verify-token');
     return response.data.isValid;
   } catch (error) {

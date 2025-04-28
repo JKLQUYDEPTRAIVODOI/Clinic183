@@ -5,6 +5,9 @@ import Card from '../../components/UI/Card';
 import Input from '../../components/UI/Input';
 import Button from '../../components/UI/Button';
 
+// Import hình ảnh
+import loginImage from '../../assets/login-image.jpg';
+
 const Register = () => {
   const [formData, setFormData] = useState({
     name: '',
@@ -64,18 +67,18 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+    setErrors({}); // Xóa lỗi cũ trước khi thử lại
     if (!validateForm()) {
-      return;
+      return; // Dừng lại nếu biểu mẫu không hợp lệ
     }
-    
+    setIsSubmitting(true);
     try {
-      setIsSubmitting(true);
-      await register(formData.name, formData.email, formData.password);
+      await register(formData);
       navigate('/');
     } catch (error) {
-      setErrors({
-        general: error.response?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.'
+      console.error('Registration failed:', error);
+      setErrors({ 
+        general: error.response?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.' 
       });
     } finally {
       setIsSubmitting(false);
@@ -83,136 +86,126 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full">
-        <div className="text-center">
-          <h2 className="text-3xl font-extrabold text-gray-900">Đăng ký tài khoản</h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Hoặc{' '}
-            <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
-              đăng nhập nếu đã có tài khoản
-            </Link>
-          </p>
-        </div>
-        
-        <Card className="mt-8">
-          {errors.general && (
-            <div className="mb-4 bg-red-50 p-4 rounded-md">
-              <p className="text-sm text-red-700">{errors.general}</p>
-            </div>
-          )}
+    <div className="min-h-screen w-screen flex items-stretch justify-center bg-gradient-to-br from-blue-50 to-indigo-50">
+      <div className="flex flex-col lg:flex-row items-stretch w-full h-screen">
+        {/* Phần bên trái: Form đăng ký */}
+        <div className="w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-6 lg:p-8 relative">
+          {/* Background pattern */}
+          <div className="absolute inset-0 bg-white/30 backdrop-blur-xl z-0"></div>
           
-          <form onSubmit={handleSubmit}>
-            <Input
-              id="name"
-              name="name"
-              type="text"
-              label="Họ tên"
-              value={formData.name}
-              onChange={handleChange}
-              error={errors.name}
-              required
-            />
-            
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              label="Email"
-              value={formData.email}
-              onChange={handleChange}
-              error={errors.email}
-              required
-            />
-            
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              label="Mật khẩu"
-              value={formData.password}
-              onChange={handleChange}
-              error={errors.password}
-              required
-            />
-            
-            <Input
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              label="Xác nhận mật khẩu"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              error={errors.confirmPassword}
-              required
-            />
-            
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Bạn là
-              </label>
-              <div className="flex flex-col sm:flex-row sm:space-x-4">
-                <div className="flex items-center mb-2 sm:mb-0">
-                  <input
-                    id="role-patient"
-                    name="role"
-                    type="radio"
-                    value="patient"
-                    checked={formData.role === 'patient'}
-                    onChange={handleChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                  />
-                  <label htmlFor="role-patient" className="ml-2 block text-sm text-gray-900">
-                    Bệnh nhân
-                  </label>
-                </div>
-                <div className="flex items-center">
-                  <input
-                    id="role-doctor"
-                    name="role"
-                    type="radio"
-                    value="doctor"
-                    checked={formData.role === 'doctor'}
-                    onChange={handleChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                  />
-                  <label htmlFor="role-doctor" className="ml-2 block text-sm text-gray-900">
-                    Bác sĩ
-                  </label>
-                </div>
+          <div className="w-full max-w-md relative z-10">
+            <div className="text-center mb-8">
+              <div className="flex items-center justify-center mb-6">
+                <Button
+                  variant="outline"
+                  className="px-6 py-2 rounded-full hover:bg-blue-50 transition-all duration-300"
+                  onClick={() => navigate('/')}
+                >
+                  ← Về trang chủ
+                </Button>
               </div>
-              <p className="mt-1 text-xs text-gray-500">
-                {formData.role === 'doctor' 
-                  ? 'Thông tin bác sĩ sẽ cần được xác minh bởi quản trị viên trước khi sử dụng.' 
-                  : 'Bạn sẽ được đăng ký với vai trò bệnh nhân.'}
+              <h2 className="text-4xl font-bold text-gray-900 mb-2">Đăng ký tài khoản</h2>
+              <p className="text-sm text-gray-600">
+                Hoặc{' '}
+                <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500 transition-colors duration-300">
+                  đăng nhập nếu đã có tài khoản
+                </Link>
               </p>
             </div>
             
-            <div className="flex items-center mt-4">
-              <input
-                id="agree-terms"
-                name="agree-terms"
-                type="checkbox"
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                required
-              />
-              <label htmlFor="agree-terms" className="ml-2 block text-sm text-gray-900">
-                Tôi đồng ý với <Link to="/terms" className="text-blue-600 hover:text-blue-500">Điều khoản dịch vụ</Link> và <Link to="/privacy" className="text-blue-600 hover:text-blue-500">Chính sách bảo mật</Link>
-              </label>
-            </div>
-            
-            <div className="mt-6">
-              <Button
-                type="submit"
-                variant="primary"
-                className="w-full"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Đang đăng ký...' : 'Đăng ký'}
-              </Button>
-            </div>
-          </form>
-        </Card>
+            <Card className="backdrop-blur-lg bg-white/80 shadow-xl rounded-2xl p-8">
+              {errors.general && (
+                <div className="mb-6 bg-red-50 p-4 rounded-xl border border-red-100">
+                  <p className="text-sm text-red-700">{errors.general}</p>
+                </div>
+              )}
+              
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <Input
+                  id="name"
+                  name="name"
+                  type="text"
+                  label="Họ tên"
+                  value={formData.name}
+                  onChange={handleChange}
+                  error={errors.name}
+                  required
+                  className="rounded-xl"
+                />
+                
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  label="Email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  error={errors.email}
+                  required
+                  className="rounded-xl"
+                />
+                
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  label="Mật khẩu"
+                  value={formData.password}
+                  onChange={handleChange}
+                  error={errors.password}
+                  required
+                  className="rounded-xl"
+                />
+                
+                <Input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  label="Xác nhận mật khẩu"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  error={errors.confirmPassword}
+                  required
+                  className="rounded-xl"
+                />
+                
+                <div className="flex items-center mt-4">
+                  <input
+                    id="agree-terms"
+                    name="agree-terms"
+                    type="checkbox"
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    required
+                  />
+                  <label htmlFor="agree-terms" className="ml-2 block text-sm text-gray-700">
+                    Tôi đồng ý với <Link to="/terms" className="text-blue-600 hover:text-blue-500 transition-colors duration-300">Điều khoản dịch vụ</Link> và <Link to="/privacy" className="text-blue-600 hover:text-blue-500 transition-colors duration-300">Chính sách bảo mật</Link>
+                  </label>
+                </div>
+                
+                <div className="mt-6">
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 transform hover:scale-[1.02]"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? 'Đang đăng ký...' : 'Đăng ký'}
+                  </Button>
+                </div>
+              </form>
+            </Card>
+          </div>
+        </div>
+
+        {/* Phần bên phải: Hình ảnh */}
+        <div className="hidden lg:block w-full lg:w-1/2 h-screen relative overflow-hidden">
+          <img
+            src={loginImage}
+            alt="Register illustration"
+            className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-700"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
+        </div>
       </div>
     </div>
   );

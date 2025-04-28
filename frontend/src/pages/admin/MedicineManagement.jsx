@@ -18,64 +18,98 @@ import {
   DialogActions,
   TextField,
   IconButton,
+  CircularProgress,
+  Alert,
+  InputAdornment,
+  MenuItem,
 } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
+import {
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Search as SearchIcon,
+  Add as AddIcon,
+  MedicalServices,
+} from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import medicineService from '../../services/medicineService';
+
+const UNITS = ['Viên', 'Ống', 'Chai', 'Gói', 'Hộp'];
 
 const MedicineManagement = () => {
+  const navigate = useNavigate();
+  const { hasRole } = useAuth();
   const [medicines, setMedicines] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [open, setOpen] = useState(false);
   const [selectedMedicine, setSelectedMedicine] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    unit: 'Viên',
     price: '',
-    quantity: '',
-    unit: '',
-    manufacturer: '',
-    expiryDate: '',
+    unit_in_stock: ''
   });
 
   useEffect(() => {
-    // TODO: Fetch medicines data from API
+    if (!hasRole('admin')) {
+      navigate('/login');
+    }
+  }, [hasRole, navigate]);
+
+  useEffect(() => {
     fetchMedicines();
   }, []);
 
   const fetchMedicines = async () => {
     try {
-      // TODO: Implement API call
-      const mockData = [
-        {
-          id: 1,
-          name: 'Paracetamol',
-          description: 'Thuốc giảm đau, hạ sốt',
-          price: '50000',
-          quantity: '100',
-          unit: 'viên',
-          manufacturer: 'Dược phẩm ABC',
-          expiryDate: '2025-12-31',
-        },
-        // Add more mock data as needed
-      ];
-      setMedicines(mockData);
-    } catch (error) {
-      console.error('Error fetching medicines:', error);
+      const data = await medicineService.getAllMedicines();
+      setMedicines(data);
+    } catch (err) {
+      console.error('Error fetching medicines:', err);
+      setError(err.message || 'Không thể lấy danh sách thuốc');
     }
   };
 
-  const handleOpen = (medicine = null) => {
+  const searchMedicines = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      let data;
+      if (searchTerm) {
+        data = await medicineService.searchMedicines(searchTerm);
+      } else {
+        data = await medicineService.getAllMedicines();
+      }
+      setMedicines(data);
+    } catch (error) {
+      console.error('Error searching medicines:', error);
+      setError('Không thể tìm kiếm thuốc. Vui lòng thử lại sau.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditOpen = (medicine = null) => {
     if (medicine) {
       setSelectedMedicine(medicine);
-      setFormData(medicine);
+      setFormData({
+        name: medicine.name,
+        description: medicine.description || '',
+        unit: medicine.unit || 'Viên',
+        price: medicine.price.toString(),
+        unit_in_stock: medicine.unit_in_stock.toString()
+      });
     } else {
       setSelectedMedicine(null);
       setFormData({
         name: '',
         description: '',
+        unit: 'Viên',
         price: '',
-        quantity: '',
-        unit: '',
-        manufacturer: '',
-        expiryDate: '',
+        unit_in_stock: ''
       });
     }
     setOpen(true);
@@ -86,36 +120,116 @@ const MedicineManagement = () => {
     setSelectedMedicine(null);
   };
 
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
+  };
+
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const handleSearchKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      searchMedicines();
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate form data
+    if (!formData.name || !formData.price || !formData.unit_in_stock) {
+      alert('Vui lòng điền đầy đủ thông tin cần thiết');
+      return;
+    }
+
+    // Validate numeric fields
+    if (isNaN(parseFloat(formData.price)) || 
+        isNaN(parseInt(formData.unit_in_stock))) {
+      alert('Giá và số lượng phải là số');
+      return;
+    }
+
     try {
-      // TODO: Implement API call to save/update medicine
+      setLoading(true);
+
+      const medicineData = {
+        name: formData.name,
+        description: formData.description,
+        unit: formData.unit,
+        price: parseFloat(formData.price),
+        unit_in_stock: parseInt(formData.unit_in_stock)
+      };
+
       if (selectedMedicine) {
-        // Update existing medicine
-        setMedicines(medicines.map(medicine =>
-          medicine.id === selectedMedicine.id ? { ...medicine, ...formData } : medicine
-        ));
+        await medicineService.updateMedicine(selectedMedicine.id, medicineData);
       } else {
-        // Add new medicine
-        const newMedicine = {
-          id: medicines.length + 1,
-          ...formData,
-        };
-        setMedicines([...medicines, newMedicine]);
+        await medicineService.createMedicine(medicineData);
       }
+
+      fetchMedicines();
       handleClose();
     } catch (error) {
       console.error('Error saving medicine:', error);
+      setError('Lỗi khi lưu thuốc. Vui lòng thử lại sau.');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleDelete = async (id) => {
-    try {
-      // TODO: Implement API call to delete medicine
-      setMedicines(medicines.filter(medicine => medicine.id !== id));
-    } catch (error) {
-      console.error('Error deleting medicine:', error);
+    if (window.confirm('Bạn có chắc chắn muốn xóa thuốc này?')) {
+      try {
+        setLoading(true);
+        await medicineService.deleteMedicine(id);
+        fetchMedicines();
+      } catch (error) {
+        console.error('Error deleting medicine:', error);
+        setError('Lỗi khi xóa thuốc. Vui lòng thử lại sau.');
+      } finally {
+        setLoading(false);
+      }
     }
+  };
+
+  const handleStockUpdate = async (id, currentStock) => {
+    const quantityValue = prompt('Nhập số lượng thuốc cần thêm vào kho (nhập số âm để giảm số lượng):', '0');
+    if (quantityValue === null) return;
+
+    const parsedQuantity = parseInt(quantityValue);
+    if (isNaN(parsedQuantity)) {
+      alert('Vui lòng nhập một số hợp lệ');
+      return;
+    }
+
+    const newStock = currentStock + parsedQuantity;
+    
+    if (newStock < 0) {
+      alert('Số lượng trong kho không thể âm');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await medicineService.updateStock(id, parsedQuantity);
+      fetchMedicines();
+    } catch (error) {
+      console.error('Error updating stock:', error);
+      setError('Lỗi khi cập nhật kho. Vui lòng thử lại sau.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
+    }).format(amount);
   };
 
   return (
@@ -130,134 +244,189 @@ const MedicineManagement = () => {
               variant="contained"
               color="primary"
               startIcon={<AddIcon />}
-              onClick={() => handleOpen()}
+              onClick={() => handleEditOpen()}
             >
-              Thêm Thuốc
+              Thêm Thuốc mới
             </Button>
           </Box>
         </Grid>
+
+        {/* Error Alert */}
+        {error && (
+          <Grid item xs={12}>
+            <Alert severity="error" onClose={() => setError(null)}>
+              {error}
+            </Alert>
+          </Grid>
+        )}
+
+        {/* Search */}
         <Grid item xs={12}>
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Tên thuốc</TableCell>
-                  <TableCell>Mô tả</TableCell>
-                  <TableCell>Giá</TableCell>
-                  <TableCell>Số lượng</TableCell>
-                  <TableCell>Đơn vị</TableCell>
-                  <TableCell>Nhà sản xuất</TableCell>
-                  <TableCell>Hạn sử dụng</TableCell>
-                  <TableCell>Thao tác</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {medicines.map((medicine) => (
-                  <TableRow key={medicine.id}>
-                    <TableCell>{medicine.name}</TableCell>
-                    <TableCell>{medicine.description}</TableCell>
-                    <TableCell>{medicine.price}</TableCell>
-                    <TableCell>{medicine.quantity}</TableCell>
-                    <TableCell>{medicine.unit}</TableCell>
-                    <TableCell>{medicine.manufacturer}</TableCell>
-                    <TableCell>{medicine.expiryDate}</TableCell>
-                    <TableCell>
-                      <IconButton onClick={() => handleOpen(medicine)}>
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton onClick={() => handleDelete(medicine.id)}>
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <TextField
+              fullWidth
+              variant="outlined"
+              label="Tìm kiếm thuốc"
+              value={searchTerm}
+              onChange={handleSearchChange}
+              onKeyPress={handleSearchKeyPress}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton onClick={searchMedicines} edge="end">
+                      <SearchIcon />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+              sx={{ mb: 2 }}
+            />
+          </Box>
+        </Grid>
+
+        {/* Medicines Table */}
+        <Grid item xs={12}>
+          {loading ? (
+            <Box display="flex" justifyContent="center" my={3}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Tên thuốc</TableCell>
+                    <TableCell>Mô tả</TableCell>
+                    <TableCell>Đơn vị</TableCell>
+                    <TableCell align="right">Giá</TableCell>
+                    <TableCell align="right">Số lượng trong kho</TableCell>
+                    <TableCell align="center">Thao tác</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {medicines.length > 0 ? (
+                    medicines.map((medicine) => (
+                      <TableRow key={medicine.id}>
+                        <TableCell>{medicine.name}</TableCell>
+                        <TableCell>{medicine.description}</TableCell>
+                        <TableCell>{medicine.unit}</TableCell>
+                        <TableCell align="right">{formatCurrency(medicine.price)}</TableCell>
+                        <TableCell align="right">{medicine.unit_in_stock}</TableCell>
+                        <TableCell align="center">
+                          <IconButton
+                            color="primary"
+                            onClick={() => handleEditOpen(medicine)}
+                          >
+                            <EditIcon />
+                          </IconButton>
+                          <IconButton
+                            color="error"
+                            onClick={() => handleDelete(medicine.id)}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={() => handleStockUpdate(medicine.id, medicine.unit_in_stock)}
+                          >
+                            Cập nhật kho
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center">
+                        Không có thuốc nào
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
         </Grid>
       </Grid>
 
-      <Dialog open={open} onClose={handleClose}>
+      {/* Edit/Add Medicine Dialog */}
+      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
         <DialogTitle>
           {selectedMedicine ? 'Chỉnh sửa Thuốc' : 'Thêm Thuốc mới'}
         </DialogTitle>
-        <DialogContent>
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+        <form onSubmit={handleSubmit}>
+          <DialogContent>
             <TextField
               fullWidth
               label="Tên thuốc"
+              name="name"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={handleInputChange}
               margin="normal"
               required
             />
             <TextField
               fullWidth
               label="Mô tả"
+              name="description"
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={handleInputChange}
               margin="normal"
               multiline
-              rows={4}
-              required
+              rows={3}
             />
+            <TextField
+              select
+              fullWidth
+              label="Đơn vị"
+              name="unit"
+              value={formData.unit}
+              onChange={handleInputChange}
+              margin="normal"
+              required
+            >
+              {UNITS.map((unit) => (
+                <MenuItem key={unit} value={unit}>
+                  {unit}
+                </MenuItem>
+              ))}
+            </TextField>
             <TextField
               fullWidth
               label="Giá"
+              name="price"
               type="number"
               value={formData.price}
-              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+              onChange={handleInputChange}
               margin="normal"
               required
               InputProps={{
-                startAdornment: '₫',
+                endAdornment: <InputAdornment position="end">VNĐ</InputAdornment>,
               }}
             />
             <TextField
               fullWidth
-              label="Số lượng"
+              label="Số lượng trong kho"
+              name="unit_in_stock"
               type="number"
-              value={formData.quantity}
-              onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+              value={formData.unit_in_stock}
+              onChange={handleInputChange}
               margin="normal"
               required
             />
-            <TextField
-              fullWidth
-              label="Đơn vị"
-              value={formData.unit}
-              onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-              margin="normal"
-              required
-            />
-            <TextField
-              fullWidth
-              label="Nhà sản xuất"
-              value={formData.manufacturer}
-              onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })}
-              margin="normal"
-              required
-            />
-            <TextField
-              fullWidth
-              label="Hạn sử dụng"
-              type="date"
-              value={formData.expiryDate}
-              onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
-              margin="normal"
-              required
-              InputLabelProps={{
-                shrink: true,
-              }}
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Hủy</Button>
-          <Button onClick={handleSubmit} variant="contained" color="primary">
-            {selectedMedicine ? 'Cập nhật' : 'Thêm mới'}
-          </Button>
-        </DialogActions>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleClose}>Hủy</Button>
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              disabled={loading}
+            >
+              {loading ? <CircularProgress size={24} /> : 'Lưu'}
+            </Button>
+          </DialogActions>
+        </form>
       </Dialog>
     </Container>
   );

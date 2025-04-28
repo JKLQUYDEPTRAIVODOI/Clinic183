@@ -1,8 +1,9 @@
 const User = require('../models/userModel');
+const Patient = require('../models/patientModel');
 const jwt = require('jsonwebtoken');
 
-// Register a new user
-exports.register = async (req, res) => {
+// Create a new user (admin only)
+exports.createUser = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
     
@@ -14,6 +15,36 @@ exports.register = async (req, res) => {
     
     // Create user
     const userId = await User.create({ name, email, password, role });
+    
+    // Get user without password
+    const user = await User.findById(userId);
+    
+    res.status(201).json({
+      message: 'User created successfully',
+      user
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Register a new user (public)
+exports.register = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    
+    // Check if user already exists
+    const existingUser = await User.findByEmail(email);
+    if (existingUser) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
+    
+    // Create user with default role 'patient'
+    const userId = await User.create({ name, email, password, role: 'patient' });
+    
+    // Create patient record
+    await Patient.create({ user_id: userId });
     
     // Get user without password
     const user = await User.findById(userId);
@@ -169,5 +200,34 @@ exports.verifyToken = async (req, res) => {
       isValid: false,
       message: 'Invalid token'
     });
+  }
+};
+
+// Reset password
+exports.resetPassword = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { password } = req.body;
+    
+    if (!password) {
+      return res.status(400).json({ message: 'Password is required' });
+    }
+    
+    // Check if user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Update password
+    const updated = await User.updatePassword(userId, password);
+    if (!updated) {
+      return res.status(400).json({ message: 'Failed to reset password' });
+    }
+    
+    res.json({ message: 'Password reset successfully' });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 }; 
